@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K3S Lab</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--fg:#e6edf3;--muted:#8b949e;--green:#3fb950;--red:#f85149;--blue:#58a6ff;--yellow:#d29922}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body{background:var(--bg);color:var(--fg);min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+header h1{font-size:18px;font-weight:700}
+header h1 span{color:var(--green)}
+.huser{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.badge{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.badge.dev{background:#1f6feb33;color:var(--blue);border:1px solid #1f6feb66}
+.badge.student{background:#23863633;color:var(--green);border:1px solid #23863666}
+.badge.running{background:#23863633;color:var(--green);border:1px solid #23863666}
+.badge.creating{background:#f9ab0033;color:var(--yellow,#d29922);border:1px solid #f9ab0066}
+.badge.error{background:#da363333;color:#f85149;border:1px solid #da363366}
+.badge.stopped{background:#6e768166;color:var(--muted);border:1px solid var(--border)}
+main{max-width:1100px;margin:0 auto;padding:24px}
+.view{display:none}.view.active{display:block}
+h2{font-size:16px;margin-bottom:14px;color:var(--fg)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.muted{color:var(--muted);font-size:12px}
+button{cursor:pointer;border:1px solid var(--border);background:#21262d;color:var(--fg);padding:8px 14px;border-radius:8px;font-size:13px;transition:.15s}
+button:hover{border-color:var(--blue)}
+button.primary{background:#238636;border-color:#238636}
+button.danger{background:#21262d;color:var(--red);border-color:#f8514955}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select{background:#0d1117;border:1px solid var(--border);color:var(--fg);padding:10px 12px;border-radius:8px;font-size:14px;width:100%}
+.login-box{max-width:360px;margin:10vh auto;text-align:center}
+.login-box .card{padding:28px}
+.login-box input{margin:6px 0}
+.login-box button{width:100%;margin-top:12px}
+.err{color:var(--red);font-size:13px;margin-top:8px;min-height:18px}
+.env-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.type-card,.node-card{cursor:pointer;border:2px solid var(--border);border-radius:10px;padding:14px;transition:.15s}
+.type-card.sel,.node-card.sel{border-color:var(--green);background:#23863611}
+.bar{height:8px;background:#21262d;border-radius:4px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:var(--green)}
+.bar i.warn{background:var(--yellow)}
+.bar i.full{background:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600}
+a{color:var(--blue);text-decoration:none}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--green);padding:12px 18px;border-radius:8px;font-size:13px;display:none;z-index:99}
+.steps{display:flex;gap:8px;margin-bottom:16px;font-size:12px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:#000000cc;display:none;align-items:center;justify-content:center;z-index:50;padding:24px}
+.modal .card{max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green);overflow-x:auto;margin:6px 0;white-space:pre-wrap;word-break:break-all}
+.copyrow{display:flex;gap:8px;align-items:center}
+.copyrow pre{flex:1}
+.copyrow button{white-space:nowrap;font-size:12px;padding:6px 10px}
+</style>
+</head>
+<body>
+
+<header id="hdr" style="display:none">
+  <h1>⚡ K3S <span>Lab</span></h1>
+  <div class="huser">
+    <span id="hname"></span>
+    <span class="badge" id="hrole"></span>
+    <button onclick="logout()">Salir</button>
+  </div>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <section id="v-login" class="view">
+    <div class="login-box">
+      <div class="card">
+        <h2 style="font-size:22px;margin-bottom:4px">⚡ K3S <span style="color:var(--green)">Lab</span></h2>
+        <p class="muted" style="margin-bottom:16px">Entornos de cómputo académicos sobre k3s</p>
+        <input id="l-user" placeholder="Usuario" autocomplete="username">
+        <input id="l-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button class="primary" onclick="login()">Entrar</button>
+        <div class="err" id="l-err"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="v-dash" class="view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2 id="dash-title">Mis entornos</h2>
+      <button class="primary" onclick="show('nuevo')">+ Nuevo entorno</button>
+    </div>
+    <div class="grid" id="env-list"></div>
+  </section>
+
+  <!-- NUEVO -->
+  <section id="v-nuevo" class="view">
+    <div class="steps">Paso 1: elige el tipo → Paso 2: elige el nodo → Paso 3: recursos → Lanzar</div>
+    <h2>1 · Tipo de entorno</h2>
+    <div class="grid" id="type-list"></div>
+    <h2 style="margin-top:22px">2 · Nodo <span class="muted">(stats en vivo)</span></h2>
+    <div class="grid" id="node-list"></div>
+    <div class="card" id="recursos-card" style="margin-top:22px;display:none">
+      <b>3 · Recursos</b>
+      <div style="margin-top:10px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="opt-gpu" onchange="updateGpuSelect()">
+          <span>GPU <span class="muted" style="font-size:12px">(runtime NVIDIA — nvidia-smi visible en el contenedor)</span></span>
+        </label>
+        <label id="gpu-select-wrap" style="display:none;gap:6px;align-items:center;font-size:13px">GPU:
+          <select id="opt-gpu-index" style="background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:4px 8px"></select>
+        </label>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="opt-home">
+          <span>Montar /home <span class="muted" style="font-size:12px">(tu carpeta personal en el contenedor — persiste)</span></span>
+        </label>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px">
+      <button onclick="show('dash')">Cancelar</button>
+      <button class="primary" id="btn-launch" onclick="launch()" disabled>Lanzar entorno</button>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="v-admin" class="view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2>Panel DEV — todos los entornos</h2>
+      <button onclick="runLifecycle()">Ejecutar ciclo de vida ahora</button>
+    </div>
+    <div id="admin-summary" class="muted" style="margin-bottom:12px"></div>
+    <div class="card" style="overflow-x:auto"><table id="admin-table"></table></div>
+  </section>
+
+  <!-- EQUIPOS (dev) -->
+  <section id="v-servers" class="view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2>Equipos — monitoreo en vivo <span class="muted" style="font-size:12px">(Prometheus del lab)</span></h2>
+      <a id="grafana-link" href="#" target="_blank" rel="noopener"><button>Grafana ↗</button></a>
+    </div>
+    <div id="servers-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px"></div>
+  </section>
+</main>
+
+<nav id="subnav" style="display:none;max-width:1100px;margin:0 auto;padding:0 24px 8px;display:none;gap:12px"></nav>
+<div class="modal" id="connect-modal" onclick="if(event.target===this)closeConnect()">
+  <div class="card">
+    <h2>Conectar — <span id="c-tipo-title" style="color:var(--green)">Colab · Connect to a local runtime</span></h2>
+    <ol id="c-steps" style="margin:12px 0 4px 18px;font-size:13px"></ol>
+    <div class="copyrow" id="c-ssh-copy" style="margin-top:12px">
+      <pre id="c-ssh"></pre><button onclick="copyText('c-ssh')">Copiar</button>
+    </div>
+    <div class="copyrow" id="c-exec-row" style="margin-top:12px;display:none">
+      <pre id="c-exec"></pre><button onclick="copyText('c-exec')">Copiar</button>
+    </div>
+    <p class="muted" id="c-url-row" style="margin-top:10px;display:none">URL:</p>
+    <div class="copyrow" id="c-url-copy" style="display:none">
+      <pre id="c-url"></pre><button onclick="copyText('c-url')">Copiar</button>
+    </div>
+    <p class="muted" id="c-pass-label" style="margin-top:10px;display:none">Password:</p>
+    <div class="copyrow" id="c-pass-row" style="display:none">
+      <pre id="c-pass"></pre><button onclick="copyText('c-pass')">Copiar</button>
+    </div>
+    <p class="muted" id="c-note" style="margin-top:10px"></p>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="primary" onclick="closeConnect()">Listo</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = location.origin + '/api';
+let selType = null, selNode = null, selGpu = false, lastNodes = [];
+
+/* Logos simplificados de los tipos de entorno */
+const ICONS = {
+  colab: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><rect width="24" height="24" rx="6" fill="#F9AB00"/><path d="M16.4 15.8a5.2 5.2 0 1 1 0-7.6" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round"/></svg>',
+  vscode: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><path fill="#007ACC" d="M17.6 2.2 9.3 10 4.8 6.4 2.6 7.5v9l2.2 1.1 4.5-3.6 8.3 7.8 3.9-2V4.2l-3.9-2zm.1 5.1v9.4L12 12l5.7-4.7z"/></svg>',
+  python: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><path fill="#3776AB" d="M12 2c-2.8 0-4.5 1.2-4.5 3v2.5H12v.8H5.2C3.6 8.3 2 9.5 2 12s1.4 3.7 3.2 3.7H7v-2.2c0-1.7 1.5-3 3.2-3h5c1.4 0 2.5-1.1 2.5-2.6V5C17.7 3.2 15 2 12 2zm-2 1.6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/><path fill="#FFD43B" d="M12 22c2.8 0 4.5-1.2 4.5-3v-2.5H12v-.8h6.8c1.6 0 3.2-1.2 3.2-3.7 0-2.5-1.4-3.7-3.2-3.7H17v2.2c0 1.7-1.5 3-3.2 3h-5C7.4 13.5 6.3 14.6 6.3 16v3c0 1.8 2.7 3 5.7 3zm2-1.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>',
+  postgres: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><rect width="24" height="24" rx="6" fill="#336791"/><text x="12" y="16.5" font-size="9.5" fill="#fff" text-anchor="middle" font-family="sans-serif" font-weight="bold">PG</text></svg>'
+};
+
+function auth(){ try { return JSON.parse(localStorage.getItem('k3slab_auth')); } catch(e){ return null; } }
+function saveAuth(a){ localStorage.setItem('k3slab_auth', JSON.stringify(a)); }
+function logout(){ localStorage.removeItem('k3slab_auth'); location.reload(); }
+
+async function api(path, opts={}){
+  const a = auth();
+  const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  if (a) headers['Authorization'] = 'Bearer ' + a.token;
+  const r = await fetch(API + path, Object.assign({}, opts, {headers}));
+  if (r.status === 401){ logout(); throw new Error('Sesión expirada'); }
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(data.detail || ('Error ' + r.status));
+  return data;
+}
+
+function toast(msg, ok=true){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+  t.style.display = 'block';
+  setTimeout(()=>t.style.display='none', 4000);
+}
+
+function show(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  document.getElementById('hdr').style.display = 'flex';
+  if (v==='dash') loadEnvs();
+  if (v==='nuevo') loadNuevo();
+  if (v==='admin') loadAdmin();
+  if (v==='servers') loadServers();
+}
+
+/* ---------- login ---------- */
+async function login(){
+  const u = document.getElementById('l-user').value.trim();
+  const p = document.getElementById('l-pass').value;
+  document.getElementById('l-err').textContent = '';
+  try {
+    const r = await fetch(API + '/auth/login', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:u, password:p})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Error');
+    saveAuth(d); enter(d);
+  } catch(e){ document.getElementById('l-err').textContent = e.message; }
+}
+document.getElementById('l-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') login(); });
+
+function enter(a){
+  document.getElementById('hname').textContent = a.username;
+  const rb = document.getElementById('hrole');
+  rb.textContent = a.role === 'dev' ? 'DEV' : 'STUDENT';
+  rb.className = 'badge ' + a.role;
+  if (a.role === 'dev'){
+    // Dev: acceso a admin + dashboard con todos los envs
+    const nav = document.getElementById('subnav');
+    nav.innerHTML = '';
+    nav.style.display = 'flex';
+    const b1 = document.createElement('button'); b1.textContent='Entornos'; b1.onclick=()=>show('dash');
+    const b2 = document.createElement('button'); b2.textContent='Panel DEV'; b2.onclick=()=>show('admin');
+    const b3 = document.createElement('button'); b3.textContent='Equipos'; b3.onclick=()=>show('servers');
+    nav.appendChild(b1); nav.appendChild(b2); nav.appendChild(b3);
+    document.getElementById('dash-title').textContent = 'Todos los entornos';
+  } else {
+    document.getElementById('dash-title').textContent = 'Mis entornos';
+  }
+  show('dash');
+}
+
+/* ---------- dashboard ---------- */
+async function loadEnvs(){
+  try {
+    const envs = await api('/envs');
+    const el = document.getElementById('env-list');
+    if (!envs.length){ el.innerHTML = '<p class="muted">No tienes entornos. Crea uno con "+ Nuevo entorno".</p>'; return; }
+    el.innerHTML = envs.map(e => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>${e.name}</b>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${e.gpu?'<span class="badge dev">GPU</span>':''}
+            <span class="badge ${e.status}">${e.status.toUpperCase()}</span>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:6px">${e.type} · nodo <b>${e.node}</b> · dueño: ${e.owner}</p>
+        <p class="muted">última actividad: ${fmt(e.last_activity)}</p>
+        <div class="env-actions">
+          ${e.type==='colab'
+            ? `<button onclick="showConnect(${e.id})">Conectar Colab ↗</button>`
+            : (e.type==='python'
+              ? `<button onclick="showConnect(${e.id})">Conectar consola ↗</button>`
+              : (e.url ? `<a href="${e.url}" target="_blank" onclick="markOpen(${e.id})"><button>Abrir ↗</button></a>` : ''))}
+          ${e.status==='stopped' ? `<button onclick="act(${e.id},'start')">Iniciar</button>` : ''}
+          ${e.status==='running' ? `<button onclick="act(${e.id},'stop')">Detener</button>` : ''}
+          <button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button>
+        </div>
+        ${e.type==='vscode' ? '<div class="muted" style="font-size:11px;margin-top:6px">password del IDE: k3slab (MVP)</div>' : ''}
+        ${e.type==='matlab' ? '<div class="muted" style="font-size:11px;margin-top:6px">password VNC: k3slab (MVP) · acceso directo por NodePort (igual que VS Code) · escritorio tarda ~1 min en arrancar</div>' : ''}
+      </div>`).join('');
+  } catch(e){ toast(e.message, false); }
+}
+function fmt(s){ if(!s) return '—'; const d = new Date(s+'Z'); return d.toLocaleString(); }
+async function markOpen(id){ try{ await api('/envs/'+id+'/activity', {method:'POST'}); }catch(e){} }
+
+/* Conectar Colab (flujo real: Connect to a local runtime) */
+async function showConnect(id){
+  try {
+    const c = await api('/envs/'+id+'/connect');
+    document.getElementById('c-ssh').textContent = c.ssh_cmd;
+    const urlRow = document.getElementById('c-url-row');
+    const urlCopy = document.getElementById('c-url-copy');
+    const execRow = document.getElementById('c-exec-row');
+    const passRow = document.getElementById('c-pass-row');
+    const passLbl = document.getElementById('c-pass-label');
+    const note = document.getElementById('c-note');
+    const sshCopy = document.getElementById('c-ssh-copy');
+    const title = document.getElementById('c-tipo-title');
+    passRow.style.display = 'none'; passLbl.style.display = 'none';
+    urlRow.style.display = 'none'; urlCopy.style.display = 'none';
+    execRow.style.display = 'none'; sshCopy.style.display = 'none';
+    if (c.tipo === 'console') {
+      title.textContent = 'Python · consola (kubectl exec)';
+      execRow.style.display = 'flex';
+      document.getElementById('c-exec').textContent = c.exec_cmd;
+      note.textContent = '';
+    } else if (c.tipo === 'matlab') {
+      title.textContent = 'MATLAB · noVNC';
+      sshCopy.style.display = 'flex';
+      document.getElementById('c-ssh').textContent = c.ssh_cmd;
+      urlRow.style.display = 'block'; urlCopy.style.display = 'flex';
+      urlRow.textContent = 'URL directa (NodePort, funciona desde la red del lab — igual que VS Code):';
+      document.getElementById('c-url').textContent = c.node_url;
+      passLbl.style.display = 'block'; passRow.style.display = 'flex';
+      passLbl.textContent = 'Password del escritorio VNC (noVNC lo pide al entrar):';
+      document.getElementById('c-pass').textContent = c.password;
+      note.textContent = 'Fuera de la red del lab usa el port-forward: lanza el comando SSH de arriba, deja la ventana abierta y abre '+c.local_url+'. El escritorio tarda ~1 min en arrancar la primera vez.';
+    } else {
+      title.textContent = 'Colab · Connect to a local runtime';
+      sshCopy.style.display = 'flex';
+      urlRow.style.display = 'block'; urlCopy.style.display = 'flex';
+      urlRow.textContent = 'URL + token para pegar en Colab (botón Connect → Connect to local runtime):';
+      document.getElementById('c-url').textContent = c.colab_url || '(el token aún no aparece — espera a que el pod termine de arrancar y reintenta)';
+      note.textContent = c.node_url
+        ? 'Nota: la URL directa '+c.node_url+' solo sirve dentro del nodo; Colab exige localhost (mixed content). Usa el túnel SSH.'
+        : '';
+    }
+    document.getElementById('c-steps').innerHTML = c.steps.map(s => '<li style="margin:4px 0">'+s.replace(/</g,'&lt;')+'</li>').join('');
+    document.getElementById('connect-modal').style.display = 'flex';
+  } catch(e){ toast(e.message, false); }
+}
+function closeConnect(){ document.getElementById('connect-modal').style.display = 'none'; }
+function copyText(id){
+  const t = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(t).then(() => toast('Copiado ✓', true));
+}
+async function act(id, action){
+  try { await api('/envs/'+id+'/'+action, {method:'POST'}); toast('Entorno '+(action==='start'?'iniciado':'detenido')+' ✓'); loadEnvs(); if(document.getElementById('v-admin').classList.contains('active')) loadAdmin(); }
+  catch(e){ toast(e.message, false); }
+}
+async function del(id, name){
+  if (!confirm('¿Eliminar '+name+'? Se borran el pod y sus datos del nodo.')) return;
+  try { await api('/envs/'+id, {method:'DELETE'}); toast('Entorno eliminado ✓'); loadEnvs(); if(document.getElementById('v-admin').classList.contains('active')) loadAdmin(); }
+  catch(e){ toast(e.message, false); }
+}
+
+/* ---------- nuevo entorno ---------- */
+async function loadNuevo(){
+  selType = selNode = null; selGpu = false; document.getElementById('btn-launch').disabled = true;
+  const [cats, nodes] = await Promise.all([api('/catalog'), api('/nodes')]);
+  lastNodes = nodes;
+  document.getElementById('opt-gpu').checked = false; updateGpuSelect();
+  const tl = document.getElementById('type-list');
+  tl.innerHTML = cats.map(c => `
+    <div class="type-card" onclick="pickType('${c.id}', this)">
+      <div style="display:flex;gap:8px;align-items:center">${ICONS[c.id]||''}<b>${c.name}</b></div>
+      <p class="muted" style="margin-top:6px">${c.description}</p>
+      <p class="muted">CPU ${c.cpu} · RAM ${c.mem}${c.ports.length? ' · puerto '+c.ports[0]:''} · acceso ${c.access}</p>
+    </div>`).join('');
+  const nl = document.getElementById('node-list');
+  nl.innerHTML = nodes.map(n => {
+    const cpuPct = Math.min(100, Math.round(n.cpu_used / (parseCores(n.cpu_total)*1000) * 100)) || 0;
+    const memPct = Math.min(100, Math.round(n.mem_used / parseMem(n.mem_total) * 100)) || 0;
+    const cls = p => p>=90 ? 'full' : (p>=60 ? 'warn' : '');
+    return `
+    <div class="node-card" onclick="pickNode('${n.name}', this)">
+      <div style="display:flex;justify-content:space-between"><b>${n.name}</b>
+        <span class="muted">${n.tier||''} ${n.status==='Ready'?'':'· ⚠️ '+n.status}</span></div>
+      <p class="muted">${n.gpu_model ? 'GPU '+n.gpu_model+' ('+n.vram_gb+') · '+n.gpu_count+' GPU(s)' : 'sin GPU'} · ${n.envs_activos} entornos activos</p>
+      <p class="muted">CPU ${n.cpu_used}m / ${n.cpu_total} cores</p>
+      <div class="bar"><i class="${cls(cpuPct)}" style="width:${cpuPct}%"></i></div>
+      <p class="muted">RAM ${n.mem_used} Mi / ${n.mem_total}</p>
+      <div class="bar"><i class="${cls(memPct)}" style="width:${memPct}%"></i></div>
+    </div>`;}).join('');
+}
+function parseCores(v){ return parseFloat(v) || 32; }
+function parseMem(v){ if(!v) return 45000; if(v.endsWith('Ki')) return Math.round(parseInt(v)/1024); if(v.endsWith('Mi')) return parseInt(v); if(v.endsWith('Gi')) return Math.round(parseFloat(v)*1024); return parseInt(v)||45000; }
+function pickType(id, el){ selType = id; document.querySelectorAll('.type-card').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); checkLaunch(); updateRecursos(); }
+function pickNode(name, el){ selNode = name; document.querySelectorAll('.node-card').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); checkLaunch(); updateRecursos(); }
+function checkLaunch(){ document.getElementById('btn-launch').disabled = !(selType && selNode); }
+
+/* Recursos (GPU opcional para colab/python/vscode + montar /home) */
+function updateRecursos(){
+  const card = document.getElementById('recursos-card');
+  const recursoTypes = ['colab','python','vscode','matlab'];
+  if (!selType || !selNode || !recursoTypes.includes(selType)) { card.style.display='none'; return; }
+  card.style.display='block';
+  const node = (lastNodes||[]).find(n=>n.name===selNode);
+  const n = node?.gpu_count || 0;
+  const sel = document.getElementById('opt-gpu-index');
+  sel.innerHTML = '<option value="">Todas las GPUs</option>' +
+    Array.from({length:n},(_,i)=>`<option value="${i}">GPU ${i}</option>`).join('');
+  // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario
+  document.getElementById('opt-home').checked = (selType !== 'python');
+}
+function updateGpuSelect(){
+  selGpu = document.getElementById('opt-gpu').checked;
+  document.getElementById('gpu-select-wrap').style.display = selGpu ? 'flex' : 'none';
+}
+async function launch(){
+  try {
+    const body = {catalog_id: selType, node_name: selNode,
+                  mount_home: document.getElementById('opt-home').checked};
+    if (selType !== 'postgres' && document.getElementById('opt-gpu').checked) {
+      body.gpu = true;
+      const v = document.getElementById('opt-gpu-index').value;
+      body.gpu_index = v === '' ? null : parseInt(v);
+    }
+    const env = await api('/envs', {method:'POST', body: JSON.stringify(body)});
+    toast('Entorno creado: ' + env.name + ' ✓'); show('dash');
+  } catch(e){ toast(e.message, false); }
+}
+
+/* ---------- admin ---------- */
+async function loadAdmin(){
+  try {
+    const o = await api('/admin/overview');
+    document.getElementById('admin-summary').textContent =
+      `Total: ${o.total_envs} · RUNNING: ${o.por_estado.running||0} · STOPPED: ${o.por_estado.stopped||0}`;
+    const rows = o.envs.map(e => `<tr>
+      <td>${e.owner}</td><td>${e.name}</td><td>${e.type}</td><td>${e.node}</td>
+      <td><span class="badge ${e.status}">${e.status.toUpperCase()}</span></td>
+      <td>${e.nodeport||'—'}</td><td>${fmt(e.last_activity)}</td>
+      <td>${e.type==='colab'?'(colab)':(e.url?`<a href="${e.url}" target="_blank">abrir ↗</a>`:'—')}</td>
+      <td>${e.status==='running'?`<button onclick="act(${e.id},'stop')">Detener</button> `:''}
+          <button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button></td></tr>`).join('');
+    document.getElementById('admin-table').innerHTML =
+      '<tr><th>Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>NodePort</th><th>Últ. actividad</th><th>URL</th><th>Acciones</th></tr>' + rows;
+  } catch(e){ toast(e.message, false); }
+}
+async function runLifecycle(){
+  try {
+    const r = await api('/admin/lifecycle/run', {method:'POST'});
+    toast(`Ciclo de vida: ${r.detenidos.length} detenidos, ${r.eliminados.length} eliminados`);
+    loadAdmin();
+  } catch(e){ toast(e.message, false); }
+}
+
+/* ---------- equipos (dev) ---------- */
+function _gb(b){ return (b/1073741824).toFixed(1).replace(/\.0$/,''); }
+function _bar(pct){
+  const p = Math.max(0, Math.min(100, pct||0));
+  const c = p>80 ? 'var(--red)' : p>60 ? 'var(--yellow)' : 'var(--green)';
+  return `<div style="background:var(--bg);border-radius:4px;height:8px;overflow:hidden;margin-top:4px"><div style="width:${p}%;height:100%;background:${c}"></div></div>`;
+}
+async function loadServers(){
+  try {
+    const d = await api('/admin/servers');
+    document.getElementById('grafana-link').href = d.grafana_url;
+    document.getElementById('servers-grid').innerHTML = d.servers.map(s => {
+      const ramPct = (s.ram_used!=null && s.ram_total) ? s.ram_used/s.ram_total*100 : null;
+      const diskPct = (s.disk_total && s.disk_free!=null) ? (s.disk_total-s.disk_free)/s.disk_total*100 : null;
+      const nGpu = (s.gpus||[]).length;
+      const gpuRows = nGpu ? s.gpus.map(gpu => {
+        const vp = gpu.vram_total ? gpu.vram_used/gpu.vram_total*100 : null;
+        return `<div style="margin-top:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span>GPU ${gpu.idx} · ${gpu.model||'—'}</span>
+            <span class="muted">${Math.round(gpu.util||0)}% util · ${Math.round(gpu.vram_used||0)}/${Math.round(gpu.vram_total||0)} MiB</span>
+          </div>
+          ${vp!=null?_bar(vp):''}
+        </div>`;
+      }).join('') : '<div class="muted" style="font-size:12px;margin-top:8px">GPU sin datos (dcgm-exporter caído en este host)</div>';
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.online?'var(--green)':'var(--red)'};margin-right:6px"></span>${s.nombre}</h3>
+          <span class="muted" style="font-size:12px">${s.hostname||'—'} · ${s.ip}</span>
+        </div>
+        <div class="muted" style="font-size:12px;margin:6px 0 12px">${s.os||'?'} · kernel ${s.kernel||'?'} · uptime ${s.uptime||'?'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:12px">
+          <div><div style="display:flex;justify-content:space-between"><span>CPU ${s.cores||'?'} núcleos</span><span>${s.cpu_pct!=null?s.cpu_pct+'%':'—'}</span></div>${_bar(s.cpu_pct)}
+               <div class="muted" style="margin-top:2px">load ${s.load1??'—'} / ${s.load5??'—'} / ${s.load15??'—'}</div></div>
+          <div><div style="display:flex;justify-content:space-between"><span>RAM</span><span>${s.ram_used!=null?_gb(s.ram_used)+' GB':'—'} / ${s.ram_total?_gb(s.ram_total)+' GB':'—'}</span></div>${ramPct!=null?_bar(ramPct):''}</div>
+          <div><div style="display:flex;justify-content:space-between"><span>Disco /</span><span>${diskPct!=null?diskPct.toFixed(0)+'% · libre '+_gb(s.disk_free)+' GB':'—'}</span></div>${diskPct!=null?_bar(diskPct):''}</div>
+          <div><div style="display:flex;justify-content:space-between"><span>Contenedores</span><span>${s.contenedores??'—'}</span></div>
+               <div class="muted" style="margin-top:2px">${s.pods_k3s?`${s.pods_k3s} pods k3s en este nodo`:''}</div></div>
+        </div>
+        <div style="margin-top:12px;font-size:12px">
+          <div style="display:flex;justify-content:space-between"><span>GPUs (${nGpu})</span><span class="muted">${nGpu?'Driver '+s.gpus[0].driver:'—'}</span></div>
+          ${gpuRows}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ toast(e.message, false); }
+}
+
+/* ---------- init ---------- */
+(function(){
+  const a = auth();
+  if (a && a.token) enter(a); else show('login');
+  setInterval(()=>{ const a2 = auth();
+    if (a2 && document.getElementById('v-dash').classList.contains('active')) loadEnvs();
+    if (a2 && document.getElementById('v-servers').classList.contains('active')) loadServers();
+  }, 30000);
+})();
+</script>
+</body>
+</html>

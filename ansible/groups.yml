@@ -1,0 +1,18 @@
+---
+# Playbook: grupos del lab (students/devs) en las 3 workstations.
+# Uso: ansible-playbook -i inventory.ini groups.yml -K
+- name: Grupos K3S Lab
+  hosts: workstations
+  become: true
+  tasks:
+    - name: Grupo students (gid 2500)
+      group:
+        name: students
+        gid: 2500
+        state: present
+
+    - name: Grupo devs (gid 2501)
+      group:
+        name: devs
+        gid: 2501
+        state: present

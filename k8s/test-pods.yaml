@@ -1,0 +1,36 @@
+# Pods de prueba del clúster (usados en Fase 0 para validar CPU y GPU).
+# Aplicar: k3s kubectl apply -f <archivo>   y borrar después del test.
+---
+# Test CPU (sin GPU)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-cpu
+  namespace: default
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: wslab02
+  containers:
+    - name: nginx
+      image: nginx:alpine
+      resources:
+        requests: { cpu: 100m, memory: 64Mi }
+        limits: { cpu: 500m, memory: 128Mi }
+  restartPolicy: Never
+---
+# Test GPU (requiere runtimeClassName nvidia en el nodo)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-gpu
+  namespace: default
+spec:
+  runtimeClassName: nvidia
+  hostPID: true   # paridad con el flujo real: nvidia-smi ve procesos
+  nodeSelector:
+    kubernetes.io/hostname: wslab02
+  containers:
+    - name: cuda
+      image: nvidia/cuda:12.4.1-base-ubuntu22.04
+      command: ["sh", "-c", "nvidia-smi -L && sleep 30"]
+  restartPolicy: Never

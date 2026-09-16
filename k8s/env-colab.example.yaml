@@ -1,0 +1,100 @@
+# Ejemplo de manifiestos que genera el backend (app/manifests.py) para un entorno colab.
+# El backend los aplica automáticamente; este archivo es de referencia/manual.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k3slab-<user>-colab-<port>
+  namespace: default
+  labels:
+    k3slab/managed: "yes"
+    k3slab/owner: "<user>"
+    k3slab/type: colab
+    k3slab/env: "<name>"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k3slab/managed: "yes"
+      k3slab/owner: "<user>"
+      k3slab/type: colab
+      k3slab/env: "<name>"
+  template:
+    metadata:
+      labels:
+        k3slab/managed: "yes"
+        k3slab/owner: "<user>"
+        k3slab/type: colab
+        k3slab/env: "<name>"
+    spec:
+      # GPU por runtime nvidia (auto-detectado por k3s v1.36)
+      runtimeClassName: nvidia
+      # Paridad con el flujo actual (--pid=host): nvidia-smi ve procesos
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/hostname: <node>
+      containers:
+        - name: main
+          image: us-docker.pkg.dev/colab-images/public/runtime:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JUPYTER_TOKEN
+              value: k3slab
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+            - name: media
+              mountPath: /media
+              readOnly: true
+            - name: mnt
+              mountPath: /mnt
+              readOnly: true
+            - name: home
+              mountPath: /home/<user>
+          resources:
+            requests:
+              cpu: "2"
+              memory: 8Gi
+            limits:
+              cpu: "4"
+              memory: 16Gi
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+        - name: media
+          hostPath:
+            path: /media
+            type: Directory
+        - name: mnt
+          hostPath:
+            path: /mnt
+            type: Directory
+        - name: home
+          hostPath:
+            path: /home/<user>
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k3slab-<user>-colab-<port>
+  namespace: default
+  labels:
+    k3slab/managed: "yes"
+    k3slab/owner: "<user>"
+    k3slab/type: colab
+    k3slab/env: "<name>"
+spec:
+  type: NodePort
+  selector:
+    k3slab/managed: "yes"
+    k3slab/owner: "<user>"
+    k3slab/type: colab
+    k3slab/env: "<name>"
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: <port>   # 31000–31999, asignado por el backend
