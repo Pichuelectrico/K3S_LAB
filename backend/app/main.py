@@ -37,9 +37,6 @@ def startup():
          "nvcr.io/partners/matlab:r2024a", "4", "16Gi", True, "6080", "web", ""),
         ("python", "Python container", "Consola Python (kubectl exec)",
          "python:3.12", "2", "4Gi", False, "", "console", ""),
-        ("postgres", "PostgreSQL", "Base de datos efímera",
-         "postgres:17", "1", "2Gi", False, "5432", "tcp",
-         '{"POSTGRES_PASSWORD": "postgres", "POSTGRES_DB": "app"}'),
     ]
     db = SessionLocal()
     for cid, name, desc, image, cpu, mem, gpu, ports, access, envj in seed_catalog:

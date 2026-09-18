@@ -2,6 +2,7 @@
 import json
 import re
 import subprocess
+import time
 
 from . import config
 
@@ -106,6 +107,18 @@ def get_nodeports_en_uso() -> set[int]:
 
 def apply_yaml(yaml_str: str) -> tuple[bool, str]:
     return kubectl("apply -f -", input_data=yaml_str)
+
+
+def get_pod_node(name: str, intentos: int = 5, pausa: float = 1.5) -> str | None:
+    """Nodo real donde el scheduler de k3s asignó el pod del entorno (label app=<name>).
+    Reintenta unos segundos: la asignación del scheduler es inmediata en la práctica."""
+    for _ in range(intentos):
+        ok, out = kubectl(
+            f"get pod -n default -l k3slab/env={name} -o jsonpath='{{.items[0].spec.nodeName}}'")
+        if ok and out.strip():
+            return out.strip()
+        time.sleep(pausa)
+    return None
 
 
 def delete_env_resources(name: str) -> tuple[bool, str]:

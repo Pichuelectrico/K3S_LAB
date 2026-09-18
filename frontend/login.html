@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>K3S Lab — Iniciar sesión</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+  <div class="login-shell">
+    <div class="login-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
+          <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
+        </svg>
+      </div>
+      <h1>K3S <span>Lab</span></h1>
+      <p>Entornos de cómputo académicos sobre k3s</p>
+    </div>
+    <div class="card login-card">
+      <label class="field">
+        <span>Usuario</span>
+        <input name="user" placeholder="cuenta Linux del laboratorio" value="jreinosoc" autocomplete="username">
+      </label>
+      <label class="field">
+        <span>Contraseña</span>
+        <input name="pass" type="password" placeholder="Contraseña de tu cuenta" autocomplete="current-password">
+      </label>
+      <a class="btn primary" href="dashboard.html">Entrar</a>
+      <p class="login-hint">Autenticación contra las cuentas Linux de los nodos (PAM)</p>
+    </div>
+  </div>
+</body>
+</html>

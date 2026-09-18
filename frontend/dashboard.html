@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>K3S Lab — Mis entornos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="header-inner">
+  <a class="brand" href="dashboard.html">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
+        <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
+      </svg>
+    </span>
+    <span class="brand-name">K3S <span>Lab</span></span>
+  </a>
+  <nav class="nav">
+    <a class="on" href="dashboard.html">Mis entornos</a>
+    <a href="nuevo.html">Nuevo entorno</a>
+  </nav>
+  <div class="huser">
+    <a class="workspace-switch" href="equipos.html">Panel Dev</a>
+    <span class="uname">jreinosoc</span>
+    <span class="badge dev">DEV</span>
+    <a class="btn ghost" href="login.html">Salir</a>
+  </div>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <div>
+      <h1>Mis entornos</h1>
+      <p>Lanza, conecta y apaga tus pods del laboratorio.</p>
+      <div class="stats">
+        <span class="stat"><span class="dot ok"></span><b>2</b> en ejecución</span>
+        <span class="stat"><span class="dot off"></span><b>1</b> detenido</span>
+        <span class="stat">Cuota <b>sin límite</b> · cuenta Dev</span>
+      </div>
+    </div>
+    <div class="page-head-actions">
+      <a class="btn primary" href="nuevo.html">Nuevo entorno</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <article class="card env-card">
+      <div class="env-card-top">
+        <div class="env-title">
+          <svg class="ico" viewBox="0 0 24 24" fill="#F9AB00" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-4.5 12.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 0c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <div>
+            <h3>colab-31003</h3>
+            <div class="env-type">Colab runtime</div>
+          </div>
+        </div>
+        <span class="badge running">RUNNING</span>
+      </div>
+      <div class="meta">
+        <div class="meta-item"><span>Nodo</span><b>wslab02</b></div>
+        <div class="meta-item"><span>NodePort</span><b>31003</b></div>
+        <div class="meta-item"><span>Creado</span><b>hace 2 h</b></div>
+        <div class="meta-item"><span>GPU</span><b>No</b></div>
+      </div>
+      <div class="env-actions">
+        <a class="btn primary" href="#conectar">Conectar Colab</a>
+        <button type="button">Detener</button>
+        <button type="button" class="danger">Eliminar</button>
+      </div>
+    </article>
+
+    <article class="card env-card">
+      <div class="env-card-top">
+        <div class="env-title">
+          <svg class="ico" viewBox="0 0 24 24" fill="#e16737" aria-hidden="true"><path d="M2 18l4-8 3 5 4-9 4 6 5-6-3 12H2z"/></svg>
+          <div>
+            <h3>matlab-31001</h3>
+            <div class="env-type">MATLAB (noVNC)</div>
+          </div>
+        </div>
+        <span class="badge running">RUNNING</span>
+      </div>
+      <div class="meta">
+        <div class="meta-item"><span>Nodo</span><b>wslab02</b></div>
+        <div class="meta-item"><span>NodePort</span><b>31001</b></div>
+        <div class="meta-item"><span>GPU</span><b><span class="badge gpu">GPU</span></b></div>
+        <div class="meta-item"><span>Escritorio</span><b>~1 min al arrancar</b></div>
+      </div>
+      <div class="env-actions">
+        <a class="btn primary" href="#abrir">Abrir escritorio</a>
+        <button type="button">Detener</button>
+        <button type="button" class="danger">Eliminar</button>
+      </div>
+      <details class="env-note">
+        <summary>Credenciales y acceso</summary>
+        <p>Password VNC (MVP): <b>k3slab</b>. Acceso directo por NodePort, igual que VS Code.</p>
+      </details>
+    </article>
+
+    <article class="card env-card stopped">
+      <div class="env-card-top">
+        <div class="env-title">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="#3776AB" d="M11.9 2c-1.4 0-2.7.12-3.85.35C4.86 2.86 4.3 3.9 4.3 5.8v2.5h7.7v.84H4.3c-1.9 0-3.56 1.14-4.08 3.3-.6 2.5-.63 4.05 0 6.66.46 1.93 1.57 3.3 3.47 3.3h2.24v-3c0-2.15 1.87-4.05 4.08-4.05h7.7c1.82 0 3.28-1.5 3.28-3.33V5.8c0-1.78-1.5-3.11-3.28-3.41C16.6 2.15 14.9 2 13.28 2h-1.4zm-3.4 2.02c.54 0 .97.45.97 1s-.43 1-.97 1c-.55 0-.98-.45-.98-1s.43-1 .98-1z"/><path fill="#FFD43B" d="M12.1 22c1.4 0 2.7-.12 3.85-.35 3.19-.51 3.75-1.55 3.75-3.45v-2.5h-7.7v-.84h7.7c1.9 0 3.56-1.14 4.08-3.3.6-2.5.63-4.05 0-6.66-.46-1.93-1.57-3.3-3.47-3.3h-2.24v3c0 2.15-1.87 4.05-4.08 4.05H6.3C4.48 9.65 3 11.15 3 12.98v4.22c0 1.78 1.5 3.11 3.28 3.41 1.11.24 2.81.39 4.43.39h1.4zm3.4-2.02c-.54 0-.97-.45-.97-1s.43-1 .97-1c.55 0 .98.45.98 1s-.43 1-.98 1z"/></svg>
+          <div>
+            <h3>python-console</h3>
+            <div class="env-type">Python console</div>
+          </div>
+        </div>
+        <span class="badge stopped">STOPPED</span>
+      </div>
+      <div class="meta">
+        <div class="meta-item"><span>Nodo</span><b>wslab03</b></div>
+        <div class="meta-item"><span>Creado</span><b>ayer</b></div>
+        <div class="meta-item"><span>Datos</span><b>Conservados</b></div>
+        <div class="meta-item"><span>GPU</span><b>No</b></div>
+      </div>
+      <div class="env-actions">
+        <button type="button" class="primary">Iniciar</button>
+        <a class="btn" href="#conectar">Conectar consola</a>
+        <button type="button" class="danger">Eliminar</button>
+      </div>
+    </article>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

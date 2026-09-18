@@ -150,10 +150,14 @@ def _env_a_json(env: Env, nodeport: int | None) -> dict:
     if nodeport:
         ip = config.NODE_IPS.get(env.node, env.node)
         url = f"http://{ip}:{nodeport}"
+    pass_efectiva = env.password or (
+        config.VSCODE_PASSWORD if env.catalog_id == "vscode"
+        else config.MATLAB_PASSWORD if env.catalog_id == "matlab" else None)
     return {
         "id": env.id, "name": env.name, "owner": env.owner, "node": env.node,
         "type": env.catalog_id, "status": env.status, "nodeport": nodeport,
         "gpu": bool(env.gpu),
+        "password": pass_efectiva,  # visible en el card y en el panel dev (MVP)
         "url": url, "created_at": env.created_at.isoformat() if env.created_at else None,
         "last_activity": env.last_activity.isoformat() if env.last_activity else None,
     }
@@ -190,12 +194,13 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     cat = db.get(Catalog, body.get("catalog_id") or "")
     if not cat:
         raise HTTPException(400, "catalog_id inválido")
-    node = body.get("node_name") or ""
-    if node not in config.NODE_IPS:
-        raise HTTPException(400, "nodo inválido (elige wslab01, wslab02 o wslab03)")
+    # Host OPCIONAL: si no se elige, k3s lo asigna (balanceo nativo por requests)
+    node = (body.get("node_name") or "").strip()
+    if node and node not in config.NODE_IPS:
+        raise HTTPException(400, "nodo inválido (elige wslab01, wslab02 o wslab03, o no elijas para que k3s lo asigne)")
 
     # GPU como recurso (opcional): default del catálogo; el usuario puede pedirla para
-    # colab/python/vscode (el UI oculta la opción para postgres) y elegir el índice
+    # colab/python/vscode/matlab (todos los tipos del catálogo) y elegir el índice
     wants_gpu = bool(body.get("gpu", bool(cat.gpu)))
     gpu_index = body.get("gpu_index")
     if gpu_index is not None and not wants_gpu:
@@ -227,18 +232,38 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     db.add(env)
     db.commit()
 
+    # Password configurable por el usuario (vscode/matlab); vacío → default del config
+    ent_password = (body.get("password") or "").strip() \
+        if cat.id in ("vscode", "matlab") else None
+    if ent_password and len(ent_password) < 4:
+        db.delete(env)
+        db.commit()
+        raise HTTPException(400, "La contraseña debe tener al menos 4 caracteres")
+    env.password = ent_password or None
+    db.commit()
+
     mount_home = bool(body.get("mount_home", cat.id in ("colab", "vscode", "matlab")))
     uid = gid = None
     if cat.id == "vscode" and mount_home:
-        uid, gid = k8s.uid_gid_en_nodo(user.username, env.node)
+        # Con host automático resolvemos el uid en wslab01 (fuente de verdad de las cuentas);
+        # ojo: si los uids del usuario difieren entre nodos (usuarios pre-Ansible) y k3s
+        # agenda en otro nodo, puede haber mismatch de permisos hasta unificar uids.
+        uid, gid = k8s.uid_gid_en_nodo(user.username, env.node or "wslab01")
     yaml_str = manifests.build_manifests(env.name, env.owner, env.node, nodeport, cat,
                                          uid=uid, gid=gid, gpu=wants_gpu, gpu_index=gpu_index,
-                                         mount_home=mount_home)
+                                         mount_home=mount_home, password=env.password)
     ok, out = k8s.apply_yaml(yaml_str)
     if not ok:
         db.delete(env)
         db.commit()
         raise HTTPException(502, f"kubectl apply falló: {out}")
+
+    # Con host automático: guardamos el nodo real que el scheduler de k3s asignó
+    if not node:
+        real = k8s.get_pod_node(env.name)
+        if real:
+            env.node = real
+            db.commit()
 
     db.add(ActivityLog(env_id=env.id, username=user.username, action="create"))
     db.commit()
@@ -346,7 +371,7 @@ def conectar_env(env_id: int, user_role=Depends(usuario_actual), db=Depends(get_
             "ssh_cmd": f"ssh -N -L {port_local}:localhost:{env.nodeport} {env.owner}@{ip}",
             "local_url": f"http://localhost:{port_local}",
             "node_url": f"http://{ip}:{env.nodeport}",
-            "password": config.MATLAB_PASSWORD,
+            "password": env.password or config.MATLAB_PASSWORD,
             "steps": [
                 f"Abre http://{ip}:{env.nodeport} (NodePort directo, igual que VS Code — funciona desde la red del lab).",
                 "noVNC pedirá el password del escritorio VNC (abajo). El escritorio tarda ~1 min la primera vez; lanza MATLAB desde su icono.",
@@ -407,3 +432,57 @@ def servers(_=Depends(requiere_dev)):
     for s in servers_data:
         s["pods_k3s"] = pods.get(s["nombre"], 0)
     return {"servers": servers_data, "grafana_url": config.GRAFANA_URL}
+
+
+@router.get("/admin/activity")
+def actividad(_=Depends(requiere_dev)):
+    """Quién está conectado (sesiones SSH/consola con `w` en los 3 nodos del lab)
+    y qué entornos están corriendo (estado real del clúster), para el panel de devs."""
+    # 1. Sesiones en vivo por nodo (la producción NO se toca)
+    sesiones = []
+    for name in ("wslab01", "wslab02", "wslab03"):
+        ip = config.NODE_IPS.get(name)
+        if not ip:
+            continue
+        try:
+            r = auth._ssh_cmd(ip, "w -h", timeout=8)
+        except Exception:  # noqa: BLE001 — nodo caído/inau-ible
+            continue
+        if r.returncode != 0:
+            continue
+        for line in r.stdout.splitlines():
+            p = line.split()
+            if len(p) < 5 or p[0] == "gdm":  # gdm = display manager del sistema, no una persona
+                continue
+            # Formato `w -h`: USER TTY FROM LOGIN@ IDLE ... — pero las sesiones SSH
+            # sin terminal NO traen TTY (la columna colapsa): [user, ip, login, idle, ...]
+            user = p[0]
+            if p[1].startswith(("pts/", "tty")):
+                tty, rest = p[1], p[2:]
+            else:
+                tty, rest = "-", p[1:]
+            if len(rest) < 3:
+                continue
+            sesiones.append({
+                "user": user, "node": name, "tty": tty, "desde": rest[0],
+                "login": rest[1], "idle": rest[2],
+            })
+
+    # 2. Entornos con estado real del clúster
+    deploy_info = k8s.get_lab_envs()
+    entornos = []
+    with SessionLocal() as db:
+        for env in db.query(Env).order_by(Env.owner, Env.name).all():
+            info = deploy_info.get(env.name) or {}
+            if info.get("ready", 0) > 0:
+                status = "running"
+            elif info.get("replicas", 0) > 0:
+                status = "creating"
+            else:
+                status = "stopped"
+            entornos.append({
+                "owner": env.owner, "name": env.name, "type": env.catalog_id,
+                "node": env.node, "nodeport": env.nodeport, "status": status,
+                "gpu": bool(env.gpu),
+            })
+    return {"sesiones": sesiones, "entornos": entornos}

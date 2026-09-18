@@ -17,7 +17,7 @@ from . import config
 def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
                     cat, uid: int | None = None, gid: int | None = None,
                     gpu: bool = False, gpu_index: int | None = None,
-                    mount_home: bool = True) -> str:
+                    mount_home: bool = True, password: str | None = None) -> str:
     """Devuelve el YAML multi-documento del entorno (Deployment + Service si aplica).
     gpu/gpu_index: GPU como recurso opcional para CUALQUIER tipo (el catálogo marca el
     default; python/vscode también pueden pedirla). gpu_index fija CUDA_VISIBLE_DEVICES.
@@ -26,13 +26,18 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
               "k3slab/type": cat.id, "k3slab/env": name}
 
     pod_spec: dict = {
-        "nodeSelector": {"kubernetes.io/hostname": node},
         "containers": [{
             "name": "main",
             "image": cat.image,
-            "resources": {"limits": {"cpu": cat.cpu, "memory": cat.mem}},
+            # requests=limits: el scheduler de k3s bin-packea por recursos garantizados
+            # (balanceo nativo cuando no se fija nodo)
+            "resources": {"requests": {"cpu": cat.cpu, "memory": cat.mem},
+                          "limits": {"cpu": cat.cpu, "memory": cat.mem}},
         }],
     }
+    if node:
+        # Host elegido por el usuario; si no, k3s lo asigna (balanceo nativo)
+        pod_spec["nodeSelector"] = {"kubernetes.io/hostname": node}
 
     # Variables de entorno del catálogo
     # (colab: el token lo genera la propia imagen y se lee de su log — ver api.py /connect)
@@ -87,7 +92,7 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         envs += [
             {"name": "HOME", "value": "/home/coder"},
             {"name": "HASHED_PASSWORD",
-             "value": hashlib.sha256(config.VSCODE_PASSWORD.encode()).hexdigest()},
+             "value": hashlib.sha256((password or config.VSCODE_PASSWORD).encode()).hexdigest()},
         ]
         # El entrypoint del coder image hace bind localhost por defecto → override
         pod_spec["containers"][0]["command"] = [
@@ -104,7 +109,7 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         # que muere sin TTY en k8s → sobreescribimos el comando replicando el arranque:
         # passwd del VNC desde $PASSWORD, vncserver :1 (5901) y noVNC (6080) en foreground.
         pod_spec["containers"][0]["securityContext"] = {"runAsUser": 0, "privileged": True}
-        envs += [{"name": "PASSWORD", "value": config.MATLAB_PASSWORD}]
+        envs += [{"name": "PASSWORD", "value": password or config.MATLAB_PASSWORD}]
         pod_spec["containers"][0]["command"] = [
             "/bin/bash", "-c",
             "mkdir -p /root/.vnc && echo -n \"$PASSWORD\" | vncpasswd -f > /root/.vnc/passwd"

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>K3S Lab — Entornos del clúster</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header dev">
+  <div class="header-inner">
+  <a class="brand" href="equipos.html">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
+        <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
+      </svg>
+    </span>
+    <span class="brand-name">K3S <span>Lab</span></span>
+    <span class="brand-context">Ops</span>
+  </a>
+  <nav class="nav">
+    <a href="equipos.html">Equipos</a>
+    <a class="on" href="admin.html">Entornos</a>
+  </nav>
+  <div class="huser">
+    <a class="workspace-switch" href="dashboard.html"><span class="label">Vista estudiante</span></a>
+    <span class="uname">jreinosoc</span>
+    <span class="badge dev">DEV</span>
+    <a class="btn ghost" href="login.html">Salir</a>
+  </div>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <div>
+      <h1>Entornos del clúster</h1>
+      <p>Todos los usuarios. Detener, iniciar o eliminar sin importar el owner.</p>
+    </div>
+    <div class="page-head-actions">
+      <a class="btn" href="#lifecycle">Ejecutar ciclo de vida</a>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input id="env-search" type="search" placeholder="Buscar por entorno, owner o nodo">
+    <div class="filters" id="status-filters">
+      <button type="button" class="chip on" data-status="all">Todos</button>
+      <button type="button" class="chip" data-status="running">Running</button>
+      <button type="button" class="chip" data-status="creating">Creating</button>
+      <button type="button" class="chip" data-status="stopped">Stopped</button>
+    </div>
+  </div>
+
+  <div class="card table-wrap">
+    <table class="data-table" id="env-table">
+      <thead>
+        <tr>
+          <th>Entorno</th>
+          <th>Owner</th>
+          <th>Tipo</th>
+          <th>Nodo</th>
+          <th>Puerto</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-status="running">
+          <td><b>k3slab-jreinosoc-colab-31003</b></td>
+          <td>jreinoso</td>
+          <td>colab</td>
+          <td>wslab02</td>
+          <td>31003</td>
+          <td><span class="badge running">RUNNING</span></td>
+          <td><div class="env-actions"><button type="button">Detener</button><button type="button" class="danger">Eliminar</button></div></td>
+        </tr>
+        <tr data-status="running">
+          <td><b>k3slab-jreinosoc-matlab-31001</b></td>
+          <td>jreinoso</td>
+          <td>matlab</td>
+          <td>wslab02</td>
+          <td>31001</td>
+          <td><span class="badge running">RUNNING</span> <span class="badge gpu">GPU</span></td>
+          <td><div class="env-actions"><button type="button">Detener</button><button type="button" class="danger">Eliminar</button></div></td>
+        </tr>
+        <tr data-status="running">
+          <td><b>k3slab-est1-python-31005</b></td>
+          <td>estudiante1</td>
+          <td>python</td>
+          <td>wslab03</td>
+          <td>31005</td>
+          <td><span class="badge running">RUNNING</span></td>
+          <td><div class="env-actions"><button type="button">Detener</button><button type="button" class="danger">Eliminar</button></div></td>
+        </tr>
+        <tr data-status="creating">
+          <td><b>k3slab-est2-colab-31006</b></td>
+          <td>estudiante2</td>
+          <td>colab</td>
+          <td>wslab02</td>
+          <td>31006</td>
+          <td><span class="badge creating">CREATING</span></td>
+          <td><div class="env-actions"><button type="button">Detener</button><button type="button" class="danger">Eliminar</button></div></td>
+        </tr>
+        <tr data-status="stopped">
+          <td><b>k3slab-jreinosoc-python-console</b></td>
+          <td>jreinoso</td>
+          <td>python</td>
+          <td>wslab03</td>
+          <td>—</td>
+          <td><span class="badge stopped">STOPPED</span></td>
+          <td><div class="env-actions"><button type="button">Iniciar</button><button type="button" class="danger">Eliminar</button></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="section-label">Política de ciclo de vida</p>
+  <div class="policy">
+    <div class="policy-step">
+      <div class="n">1</div>
+      <h3>7 días inactivo → Detenido</h3>
+      <p>Scale a 0. El PVC y el home se conservan. El scheduler corre cada 60 s.</p>
+    </div>
+    <div class="policy-step">
+      <div class="n">2</div>
+      <h3>90 días inactivo → Eliminado</h3>
+      <p>Se borra el entorno. Los archivos del home del nodo no se tocan.</p>
+    </div>
+    <div class="policy-step">
+      <div class="n">3</div>
+      <h3>1 entorno activo por estudiante</h3>
+      <p>Los entornos en CREATING aún descargan imagen: no se pueden usar. Las cuentas Dev no tienen ese tope.</p>
+    </div>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -56,7 +56,7 @@ SSH_USER = os.getenv("K3SLAB_SSH_USER", "jreinosoc")
 
 # Monitoreo (Prometheus del lab — el de GMED corre en :9393, no usar)
 PROM_URL = os.getenv("K3SLAB_PROM_URL", "http://172.21.230.10:9090")
-GRAFANA_URL = os.getenv("K3SLAB_GRAFANA_URL", "http://172.21.230.10:3000")
+GRAFANA_URL = os.getenv("K3SLAB_GRAFANA_URL", "https://mlab-grafana.usfq.edu.ec/")
 
 # Nombres amigables de hosts (IP → nombre) para el panel de equipos
 HOST_NAMES = {

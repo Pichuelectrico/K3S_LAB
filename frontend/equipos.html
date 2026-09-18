@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>K3S Lab — Equipos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header dev">
+  <div class="header-inner">
+  <a class="brand" href="equipos.html">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
+        <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
+      </svg>
+    </span>
+    <span class="brand-name">K3S <span>Lab</span></span>
+    <span class="brand-context">Ops</span>
+  </a>
+  <nav class="nav">
+    <a class="on" href="equipos.html">Equipos</a>
+    <a href="admin.html">Entornos</a>
+  </nav>
+  <div class="huser">
+    <a class="workspace-switch" href="dashboard.html"><span class="label">Vista estudiante</span></a>
+    <span class="uname">jreinosoc</span>
+    <span class="badge dev">DEV</span>
+    <a class="btn ghost" href="login.html">Salir</a>
+  </div>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <div>
+      <h1>Operación del clúster</h1>
+      <p>Actividad de laboratorio y salud de hosts vía Prometheus.</p>
+    </div>
+    <div class="page-head-actions">
+      <a class="btn" href="#grafana">Abrir Grafana</a>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="lbl">Hosts laboratorio</div>
+      <div class="val">3 / 3</div>
+      <div class="sub">wslab01–03 UP</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Sesiones</div>
+      <div class="val">3</div>
+      <div class="sub">1 usuario en 3 nodos</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Entornos activos</div>
+      <div class="val">3</div>
+      <div class="sub">2 GPU · 1 CPU</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Producción</div>
+      <div class="val">2</div>
+      <div class="sub">A100 / H200 — no tocar</div>
+    </div>
+  </div>
+
+  <p class="section-label">Actividad</p>
+  <div class="card table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Usuario</th><th>Conectado en</th><th>Entornos corriendo</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>jreinoso</b><div class="faint">devs</div></td>
+          <td>
+            <div class="session-list">
+              <span>wslab01 · pts/0 · 10.74.74.63 · 11:15</span>
+              <span>wslab02 · pts/1 · 10.74.74.63 · 10:14</span>
+              <span>wslab03 · pts/2 · 10.74.74.63 · 09:40</span>
+            </div>
+          </td>
+          <td>
+            <div class="env-chips">
+              <span class="badge running">matlab-31001 · wslab02 · GPU</span>
+              <span class="badge running">colab-31003 · wslab02</span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><b>estudiante1</b><div class="faint">students</div></td>
+          <td><span class="muted">Sin sesión SSH</span></td>
+          <td>
+            <div class="env-chips">
+              <span class="badge running">python-31005 · wslab03</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="section-label">Laboratorio · wslab01–03</p>
+  <div class="host-grid">
+    <article class="card host-card">
+      <h3>wslab01 <span class="badge running">UP</span></h3>
+      <div class="kv"><span>SO / Kernel</span><b>Ubuntu 24.04 · 6.8.0-40</b></div>
+      <div class="kv"><span>Uptime</span><b>7 días</b></div>
+      <div class="kv"><span>CPU (16 cores)</span><b>12%</b></div>
+      <div class="bar"><i style="width:12%"></i></div>
+      <div class="kv"><span>RAM</span><b>8.1 / 62 GB (13%)</b></div>
+      <div class="bar"><i style="width:13%"></i></div>
+      <div class="kv"><span>Disco</span><b>34%</b></div>
+      <div class="bar"><i style="width:34%"></i></div>
+      <div class="kv"><span>GPU</span><b>A4000 · 0.4/16 GB · 0%</b></div>
+      <div class="kv"><span>Contenedores / pods</span><b>3 · 1</b></div>
+    </article>
+    <article class="card host-card">
+      <h3>wslab02 <span class="badge running">UP</span></h3>
+      <div class="kv"><span>SO / Kernel</span><b>Ubuntu 24.04 · 6.8.0-40</b></div>
+      <div class="kv"><span>Uptime</span><b>7 días</b></div>
+      <div class="kv"><span>CPU (32 cores)</span><b>45%</b></div>
+      <div class="bar"><i class="warn" style="width:45%"></i></div>
+      <div class="kv"><span>RAM</span><b>52 / 125 GB (42%)</b></div>
+      <div class="bar"><i style="width:42%"></i></div>
+      <div class="kv"><span>Disco</span><b>51%</b></div>
+      <div class="bar"><i class="warn" style="width:51%"></i></div>
+      <div class="kv"><span>GPU</span><b>RTX A2000 · 0.4/12 GB · 3%</b></div>
+      <div class="kv"><span>Contenedores / pods</span><b>9 · 3</b></div>
+    </article>
+    <article class="card host-card">
+      <h3>wslab03 <span class="badge running">UP</span></h3>
+      <div class="kv"><span>SO / Kernel</span><b>Ubuntu 24.04 · 6.8.0-40</b></div>
+      <div class="kv"><span>Uptime</span><b>6 días</b></div>
+      <div class="kv"><span>CPU (16 cores)</span><b>23%</b></div>
+      <div class="bar"><i style="width:23%"></i></div>
+      <div class="kv"><span>RAM</span><b>14 / 62 GB (23%)</b></div>
+      <div class="bar"><i style="width:23%"></i></div>
+      <div class="kv"><span>Disco</span><b>28%</b></div>
+      <div class="bar"><i style="width:28%"></i></div>
+      <div class="kv"><span>GPU</span><b>A4000 · libre</b></div>
+      <div class="kv"><span>Contenedores / pods</span><b>4 · 1</b></div>
+    </article>
+  </div>
+
+  <p class="section-label">Producción · fuera del catálogo</p>
+  <div class="prod-banner">
+    <strong>No tocar.</strong>
+    <span>A100 y H200 están en producción (GMED / colabs). El scrape de Prometheus cubre 7 hosts; DGX quedan fuera de esta vista.</span>
+  </div>
+  <div class="host-grid">
+    <article class="card host-card">
+      <h3>a100-node <span class="badge running">UP</span> <span class="badge warn-prod">producción</span></h3>
+      <div class="kv"><span>CPU (128 cores)</span><b>31%</b></div>
+      <div class="bar"><i style="width:31%"></i></div>
+      <div class="kv"><span>RAM</span><b>240 / 1000 GB (24%)</b></div>
+      <div class="bar"><i style="width:24%"></i></div>
+      <div class="kv"><span>GPU</span><b>A100 ×4 · 96/320 GB</b></div>
+      <div class="kv"><span>Contenedores</span><b>27</b></div>
+    </article>
+    <article class="card host-card">
+      <h3>h200-node <span class="badge running">UP</span> <span class="badge warn-prod">producción</span></h3>
+      <div class="kv"><span>CPU (192 cores)</span><b>88%</b></div>
+      <div class="bar"><i class="full" style="width:88%"></i></div>
+      <div class="kv"><span>RAM</span><b>780 / 2000 GB (39%)</b></div>
+      <div class="bar"><i style="width:39%"></i></div>
+      <div class="kv"><span>GPU</span><b>H200 ×8 · util 99%</b></div>
+      <div class="kv"><span>Contenedores</span><b>41</b></div>
+    </article>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -16,3 +16,8 @@ backend/data/
 
 # Sistema
 .DS_Store
+
+# Tooling local (skills/config de agentes, no es parte del proyecto)
+.agents/
+.claude/
+skills-lock.json

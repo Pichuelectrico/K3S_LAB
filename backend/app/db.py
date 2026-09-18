@@ -2,7 +2,7 @@
 import datetime as dt
 
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, String,
-                        create_engine)
+                        Text, create_engine)
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from . import config
@@ -48,6 +48,7 @@ class Env(Base):
     nodeport = Column(Integer, nullable=True)
     status = Column(String, default="running")  # running | stopped | deleting
     gpu = Column(Integer, default=0)  # 1 = creado con GPU (badge en la UI)
+    password = Column(Text, nullable=True)  # password configurado por el usuario (vscode/matlab); None = default
     created_at = Column(DateTime, default=now)
     last_activity = Column(DateTime, default=now)
     stopped_at = Column(DateTime, nullable=True)
