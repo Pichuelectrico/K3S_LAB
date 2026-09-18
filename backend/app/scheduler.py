@@ -17,6 +17,10 @@ def run_lifecycle(log=print) -> dict:
         envs = db.query(Env).filter(Env.status.in_(["running", "stopped"])).all()
         for env in envs:
             try:
+                # El playground compartido es un servicio permanente (gestionado por
+                # los devs): el ciclo de vida automático no lo detiene ni lo borra
+                if env.catalog_id == "playground":
+                    continue
                 ultima = env.last_activity or env.created_at
                 if ultima is None:
                     continue

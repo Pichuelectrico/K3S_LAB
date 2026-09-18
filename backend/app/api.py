@@ -157,6 +157,7 @@ def _env_a_json(env: Env, nodeport: int | None) -> dict:
         "id": env.id, "name": env.name, "owner": env.owner, "node": env.node,
         "type": env.catalog_id, "status": env.status, "nodeport": nodeport,
         "gpu": bool(env.gpu),
+        "shared": env.catalog_id == "playground",  # compartido: todos lo ven, solo dev lo gestiona
         "password": pass_efectiva,  # visible en el card y en el panel dev (MVP)
         "url": url, "created_at": env.created_at.isoformat() if env.created_at else None,
         "last_activity": env.last_activity.isoformat() if env.last_activity else None,
@@ -168,7 +169,8 @@ def listar_envs(user_role=Depends(usuario_actual), db=Depends(get_db)):
     user, role = user_role
     q = db.query(Env).filter(Env.status != "deleting")
     if role != "dev":
-        q = q.filter(Env.owner == user.username)
+        # Los estudiantes ven sus entornos + el playground compartido (solo conectar)
+        q = q.filter((Env.owner == user.username) | (Env.catalog_id == "playground"))
     deploy_info = k8s.get_lab_envs()
     out = []
     for env in q.order_by(Env.created_at.desc()).all():
@@ -194,6 +196,17 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     cat = db.get(Catalog, body.get("catalog_id") or "")
     if not cat:
         raise HTTPException(400, "catalog_id inválido")
+
+    # Playground compartido: UNA única instancia para todos, sin home, gestionada por los devs
+    es_pg = cat.id == "playground"
+    if es_pg:
+        if role != "dev":
+            raise HTTPException(403, "El playground solo lo pueden crear los devs")
+        existe = db.query(Env).filter(Env.catalog_id == "playground",
+                                      Env.status != "deleting").first()
+        if existe:
+            raise HTTPException(409, f"El playground ya existe ({existe.name}) — está en el dashboard")
+
     # Host OPCIONAL: si no se elige, k3s lo asigna (balanceo nativo por requests)
     node = (body.get("node_name") or "").strip()
     if node and node not in config.NODE_IPS:
@@ -206,8 +219,9 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     if gpu_index is not None and not wants_gpu:
         gpu_index = None
 
-    # Cuota: 1 entorno activo por student (los devs sin límite en el MVP)
-    if role != "dev":
+    # Cuota: 1 entorno activo por student (los devs sin límite en el MVP);
+    # crear el playground no cuenta para la cuota del dev
+    if role != "dev" and not es_pg:
         activos = db.query(Env).filter(
             Env.owner == user.username, Env.status == "running").count()
         if activos >= config.MAX_ENVS_ACTIVOS_POR_STUDENT:
@@ -226,9 +240,11 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
         if nodeport is None:
             raise HTTPException(507, "No hay NodePorts libres en el rango")
 
-    env = Env(name=f"k3slab-{user.username}-{cat.id}-{nodeport or 'console'}",
-              owner=user.username, node=node, catalog_id=cat.id, nodeport=nodeport,
-              gpu=1 if wants_gpu else 0)
+    # El playground comparte nombre fijo (una instancia); el resto lleva el dueño
+    nombre = (f"k3slab-playground-{nodeport or 'console'}" if es_pg
+              else f"k3slab-{user.username}-{cat.id}-{nodeport or 'console'}")
+    env = Env(name=nombre, owner=user.username, node=node, catalog_id=cat.id,
+              nodeport=nodeport, gpu=1 if wants_gpu else 0)
     db.add(env)
     db.commit()
 
@@ -243,6 +259,8 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     db.commit()
 
     mount_home = bool(body.get("mount_home", cat.id in ("colab", "vscode", "matlab")))
+    if es_pg:
+        mount_home = False  # el playground es compartido: nunca monta un home
     uid = gid = None
     if cat.id == "vscode" and mount_home:
         # Con host automático resolvemos el uid en wslab01 (fuente de verdad de las cuentas);
@@ -270,11 +288,16 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     return _env_a_json(env, nodeport)
 
 
-def _obtener_env_propio(env_id: int, user: User, role: str, db) -> Env:
+def _obtener_env_propio(env_id: int, user: User, role: str, db,
+                        permitir_playground: bool = False) -> Env:
     env = db.get(Env, env_id)
     if not env:
         raise HTTPException(404, "Entorno no existe")
     if role != "dev" and env.owner != user.username:
+        # El playground es compartido: todos pueden conectarse/iniciarlo,
+        # pero detener/eliminar queda solo para los devs (dueño)
+        if permitir_playground and env.catalog_id == "playground":
+            return env
         raise HTTPException(403, "Ese entorno no es tuyo")
     return env
 
@@ -282,7 +305,7 @@ def _obtener_env_propio(env_id: int, user: User, role: str, db) -> Env:
 @router.post("/envs/{env_id}/start")
 def iniciar_env(env_id: int, user_role=Depends(usuario_actual), db=Depends(get_db)):
     user, role = user_role
-    env = _obtener_env_propio(env_id, user, role, db)
+    env = _obtener_env_propio(env_id, user, role, db, permitir_playground=True)
     ok, out = k8s.scale_env(env.name, 1)
     if not ok:
         raise HTTPException(502, f"scale falló: {out}")
@@ -322,7 +345,7 @@ def eliminar_env(env_id: int, user_role=Depends(usuario_actual), db=Depends(get_
 @router.post("/envs/{env_id}/activity")
 def registrar_actividad(env_id: int, user_role=Depends(usuario_actual), db=Depends(get_db)):
     user, role = user_role
-    env = _obtener_env_propio(env_id, user, role, db)
+    env = _obtener_env_propio(env_id, user, role, db, permitir_playground=True)
     env.last_activity = now()
     db.add(ActivityLog(env_id=env.id, username=user.username, action="open"))
     db.commit()
@@ -338,26 +361,33 @@ def conectar_env(env_id: int, user_role=Depends(usuario_actual), db=Depends(get_
     - python (consola): SSH al nodo + kubectl exec dentro del contenedor
       (los estudiantes tienen cuenta en wslab01, donde k3s kubectl está disponible)"""
     user, role = user_role
-    env = _obtener_env_propio(env_id, user, role, db)
+    env = _obtener_env_propio(env_id, user, role, db, permitir_playground=True)
     if env.status != "running":
         raise HTTPException(409, "El entorno no está corriendo (inícialo primero)")
     ip = config.NODE_IPS.get(env.node, env.node)
     head = config.NODE_IPS.get("wslab01", "wslab01")
+    es_pg = env.catalog_id == "playground"
+    es_colab = env.catalog_id in ("colab", "playground")  # el playground es colab compartido
+    # En un entorno compartido el túnel va por la cuenta del que se conecta, no la del dueño
+    tunnel_user = user.username if es_pg else env.owner
 
-    if env.catalog_id == "colab":
+    if es_colab:
         if not env.nodeport:
             raise HTTPException(400, "Este entorno no expone puertos")
         token = k8s.get_pod_token(env.name)
         port_local = 9000  # puerto local sugerido (el doc usa 127.0.0.1:9000:8080)
         return {
             "tipo": "colab",
+            "shared": es_pg,
             "token": token,
-            "ssh_cmd": f"ssh -N -L {port_local}:localhost:{env.nodeport} {env.owner}@{ip}",
+            "ssh_cmd": f"ssh -N -L {port_local}:localhost:{env.nodeport} {tunnel_user}@{ip}",
             "colab_url": f"http://localhost:{port_local}/?token={token}" if token else None,
             "node_url": f"http://{ip}:{env.nodeport}",
             "steps": [
                 "En tu terminal lanza el túnel SSH de arriba y deja la ventana abierta.",
                 "En colab.research.google.com: botón Connect → Connect to local runtime y pega la URL de abajo.",
+                "El playground es compartido: cierra tu sesión en Colab al terminar, no lo detengas ni lo elimines (eso es de los devs)."
+                if es_pg else
                 "Al terminar tu sesión, detén o elimina el entorno para liberar recursos.",
             ],
         }
@@ -484,5 +514,6 @@ def actividad(_=Depends(requiere_dev)):
                 "owner": env.owner, "name": env.name, "type": env.catalog_id,
                 "node": env.node, "nodeport": env.nodeport, "status": status,
                 "gpu": bool(env.gpu),
+                "shared": env.catalog_id == "playground",
             })
     return {"sesiones": sesiones, "entornos": entornos}

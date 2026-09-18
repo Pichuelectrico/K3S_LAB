@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>K3S Lab</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -67,11 +68,23 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
   font-size:10.5px;font-weight:700;letter-spacing:.6px}
 .badge.dev{background:rgba(225,29,72,.12);color:var(--accent-2);border:1px solid rgba(225,29,72,.35)}
 .badge.gpu{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.35)}
+.badge.shared{background:rgba(96,165,250,.14);color:var(--blue);border:1px solid rgba(96,165,250,.35)}
 .badge.student{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.3)}
 .badge.running{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.3)}
 .badge.creating{background:rgba(251,191,36,.12);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
 .badge.error{background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.3)}
 .badge.stopped{background:rgba(124,138,165,.12);color:var(--muted);border:1px solid var(--border)}
+
+/* filtros compactos (actividad + panel dev) */
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.filters input,.filters select{background:transparent;border:1px solid var(--border);color:var(--muted);
+  border-radius:99px;padding:3px 11px;font-size:12px;height:26px;outline:none;
+  transition:border-color .15s,color .15s;appearance:none;-webkit-appearance:none;cursor:pointer}
+.filters input{flex:1;min-width:150px;max-width:250px;color:var(--text);cursor:text}
+.filters input::placeholder{color:var(--muted)}
+.filters input:focus,.filters select:focus{border-color:var(--accent-2);color:var(--text)}
+.filters select{max-width:150px}
+.filters select option{background:#0d1526;color:var(--text)}
 
 /* ---------- layout ---------- */
 main{max-width:1180px;margin:0 auto;padding:26px 20px}
@@ -236,8 +249,14 @@ a{color:var(--blue);text-decoration:none}
   <section id="v-login" class="view">
     <div class="login-box">
       <div class="card">
-        <h2 style="font-size:22px;margin-bottom:4px">⚡ K3S <span style="color:var(--green)">Lab</span></h2>
-        <p class="muted" style="margin-bottom:16px">Entornos de cómputo académicos sobre k3s</p>
+        <div class="brand-mark" style="margin:0 auto 12px" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
+            <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
+          </svg>
+        </div>
+        <h2 style="font-size:22px;margin-bottom:4px">K3S <span style="color:var(--accent-2)">Lab</span></h2>
+        <p class="muted" style="margin-bottom:16px">Gestor de entornos de cómputo · USFQ AI Servers</p>
         <input id="l-user" placeholder="Usuario" autocomplete="username">
         <input id="l-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
         <button class="primary" onclick="login()">Entrar</button>
@@ -342,7 +361,14 @@ a{color:var(--blue);text-decoration:none}
       <h2>Panel DEV — todos los entornos</h2>
       <button onclick="runLifecycle()">Ejecutar ciclo de vida ahora</button>
     </div>
-    <div id="admin-summary" class="muted" style="margin-bottom:12px"></div>
+    <div id="admin-summary" class="muted" style="margin-bottom:8px"></div>
+    <div class="filters" id="admin-filters">
+      <input id="adm-q" placeholder="Buscar usuario, entorno, nodo o tipo…" oninput="renderAdmin()">
+      <select id="adm-user" onchange="renderAdmin()"><option value="">Usuario: todos</option></select>
+      <select id="adm-node" onchange="renderAdmin()"><option value="">Nodo: todos</option></select>
+      <select id="adm-type" onchange="renderAdmin()"><option value="">Tipo: todos</option></select>
+      <select id="adm-status" onchange="renderAdmin()"><option value="">Estado: todas</option><option>running</option><option>stopped</option></select>
+    </div>
     <div class="card" style="overflow-x:auto"><table id="admin-table"></table></div>
   </section>
 
@@ -353,7 +379,14 @@ a{color:var(--blue);text-decoration:none}
       <a id="grafana-link" href="#" target="_blank" rel="noopener"><button>Grafana ↗</button></a>
     </div>
     <div id="activity-card" class="card" style="margin-bottom:14px">
-      <h3 style="margin:0 0 8px">Actividad — quién está conectado y qué corre <span class="muted" style="font-size:12px">(sesiones de los 3 nodos + clúster)</span></h3>
+      <h3 style="margin:0 0 10px">Actividad — quién está conectado y qué corre <span class="muted" style="font-size:12px">(sesiones de los 3 nodos + clúster)</span></h3>
+      <div class="filters">
+        <input id="act-q" placeholder="Buscar usuario, nodo o tipo…" oninput="renderActivity()">
+        <select id="act-user" onchange="renderActivity()"><option value="">Usuario: todos</option></select>
+        <select id="act-node" onchange="renderActivity()"><option value="">Nodo: todos</option></select>
+        <select id="act-type" onchange="renderActivity()"><option value="">Tipo: todos</option></select>
+        <select id="act-status" onchange="renderActivity()"><option value="">Estado: todos</option></select>
+      </div>
       <div id="activity-body" class="muted" style="font-size:13px">Cargando…</div>
     </div>
     <div id="servers-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px"></div>
@@ -374,6 +407,10 @@ a{color:var(--blue);text-decoration:none}
     <p class="muted" id="c-url-row" style="margin-top:10px;display:none">URL:</p>
     <div class="copyrow" id="c-url-copy" style="display:none">
       <pre id="c-url"></pre><button onclick="copyText('c-url')">Copiar</button>
+    </div>
+    <p class="muted" id="c-token-label" style="margin-top:10px;display:none">Token del runtime (Colab lo pide como alternativa a la URL):</p>
+    <div class="copyrow" id="c-token-row" style="display:none">
+      <pre id="c-token"></pre><button onclick="copyText('c-token')">Copiar</button>
     </div>
     <p class="muted" id="c-pass-label" style="margin-top:10px;display:none">Password:</p>
     <div class="copyrow" id="c-pass-row" style="display:none">
@@ -424,7 +461,7 @@ function show(v){
   view.classList.add('active','entering');
   clearTimeout(view._t);
   view._t = setTimeout(()=>view.classList.remove('entering'), 1500);
-  document.getElementById('hdr').style.display = 'block';
+  document.getElementById('hdr').style.display = (v === 'login') ? 'none' : 'block';
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on', a.dataset.v===v));
   if (v==='dash') return loadEnvs();
   if (v==='nuevo') return loadNuevo();
@@ -486,31 +523,38 @@ async function loadEnvs(){
   try {
     const envs = await api('/envs');
     const el = document.getElementById('env-list');
+    const esDev = (auth()||{}).role === 'dev';
     if (!envs.length){ el.innerHTML = '<p class="muted">No tienes entornos. Crea uno con "+ Nuevo entorno".</p>'; return; }
-    el.innerHTML = envs.map(e => `
+    el.innerHTML = envs.map(e => {
+      // Playground compartido: los estudiantes solo conectan (iniciar si está apagado);
+      // detener/eliminar es de los devs
+      const soloConectar = e.shared && !esDev;
+      return `
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <b>${e.name}</b>
           <div style="display:flex;gap:6px;align-items:center">
+            ${e.shared?'<span class="badge shared">COMPARTIDO</span>':''}
             ${e.gpu?'<span class="badge gpu">GPU</span>':''}
             <span class="badge ${e.status}">${e.status.toUpperCase()}</span>
           </div>
         </div>
-        <p class="muted" style="margin-top:6px">${e.type} · nodo <b>${e.node}</b> · dueño: ${e.owner}</p>
+        <p class="muted" style="margin-top:6px">${e.type} · nodo <b>${e.node}</b> · ${e.shared ? 'compartido · gestionado por los devs' : 'dueño: '+e.owner}</p>
         <p class="muted">última actividad: ${fmt(e.last_activity)}</p>
         <div class="env-actions">
-          ${e.type==='colab'
+          ${e.type==='colab'||e.type==='playground'
             ? `<button onclick="showConnect(${e.id})">Conectar Colab ↗</button>`
             : (e.type==='python'
               ? `<button onclick="showConnect(${e.id})">Conectar consola ↗</button>`
               : (e.url ? `<a href="${e.url}" target="_blank" onclick="markOpen(${e.id})"><button>Abrir ↗</button></a>` : ''))}
           ${e.status==='stopped' ? `<button onclick="act(${e.id},'start')">Iniciar</button>` : ''}
-          ${e.status==='running' ? `<button onclick="act(${e.id},'stop')">Detener</button>` : ''}
-          <button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button>
+          ${!soloConectar && e.status==='running' ? `<button onclick="act(${e.id},'stop')">Detener</button>` : ''}
+          ${!soloConectar ? `<button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button>` : ''}
         </div>
         ${e.type==='vscode' ? `<div class="muted" style="font-size:11px;margin-top:6px">password del IDE: <b>${e.password||'k3slab'}</b>${e.password?'':' (default)'}</div>` : ''}
         ${e.type==='matlab' ? `<div class="muted" style="font-size:11px;margin-top:6px">password VNC: <b>${e.password||'k3slab'}</b>${e.password?'':' (default)'} · acceso directo por NodePort (igual que VS Code) · escritorio tarda ~1 min en arrancar</div>` : ''}
-      </div>`).join('');
+        ${e.shared && !esDev ? `<div class="muted" style="font-size:11px;margin-top:6px">Playground compartido: úsalo con cuidado — detener/eliminar es de los devs</div>` : ''}
+      </div>`; }).join('');
   } catch(e){ toast(e.message, false); }
 }
 function fmt(s){ if(!s) return '—'; const d = new Date(s+'Z'); return d.toLocaleString(); }
@@ -525,11 +569,14 @@ async function showConnect(id){
     const urlCopy = document.getElementById('c-url-copy');
     const execRow = document.getElementById('c-exec-row');
     const passRow = document.getElementById('c-pass-row');
+    const tokenRow = document.getElementById('c-token-row');
+    const tokenLbl = document.getElementById('c-token-label');
     const passLbl = document.getElementById('c-pass-label');
     const note = document.getElementById('c-note');
     const sshCopy = document.getElementById('c-ssh-copy');
     const title = document.getElementById('c-tipo-title');
     passRow.style.display = 'none'; passLbl.style.display = 'none';
+    tokenRow.style.display = 'none'; tokenLbl.style.display = 'none';
     urlRow.style.display = 'none'; urlCopy.style.display = 'none';
     execRow.style.display = 'none'; sshCopy.style.display = 'none';
     if (c.tipo === 'console') {
@@ -549,11 +596,15 @@ async function showConnect(id){
       document.getElementById('c-pass').textContent = c.password;
       note.textContent = 'Fuera de la red del lab usa el port-forward: lanza el comando SSH de arriba, deja la ventana abierta y abre '+c.local_url+'. El escritorio tarda ~1 min en arrancar la primera vez.';
     } else {
-      title.textContent = 'Colab · Connect to a local runtime';
+      title.textContent = c.shared ? 'Playground · Colab (compartido)' : 'Colab · Connect to a local runtime';
       sshCopy.style.display = 'flex';
       urlRow.style.display = 'block'; urlCopy.style.display = 'flex';
       urlRow.textContent = 'URL + token para pegar en Colab (botón Connect → Connect to local runtime):';
       document.getElementById('c-url').textContent = c.colab_url || '(el token aún no aparece — espera a que el pod termine de arrancar y reintenta)';
+      if (c.token){
+        tokenLbl.style.display = 'block'; tokenRow.style.display = 'flex';
+        document.getElementById('c-token').textContent = c.token;
+      }
       note.textContent = c.node_url
         ? 'Nota: la URL directa '+c.node_url+' solo sirve dentro del nodo; Colab exige localhost (mixed content). Usa el túnel SSH.'
         : '';
@@ -589,9 +640,11 @@ async function loadNuevo(){
   document.getElementById('opt-pass').value = '';
   document.getElementById('res-pass').style.display = '';
   const tl = document.getElementById('type-list');
-  tl.innerHTML = cats.map(c => `
+  const esDev = (auth()||{}).role === 'dev';
+  tl.innerHTML = cats.filter(c => c.id !== 'playground' || esDev).map(c => `
     <div class="type-card" onclick="pickType('${c.id}', this)">
-      <div style="display:flex;gap:8px;align-items:center">${ICONS[c.id]||''}<b>${c.name}</b></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${ICONS[c.id]||ICONS.colab||''}<b>${c.name}</b>${c.id==='playground'?'<span class="badge dev">DEV</span>':''}</div>
       <p class="muted" style="margin-top:6px">${c.description}</p>
       <p class="muted">CPU ${c.cpu} · RAM ${c.mem}${c.ports.length? ' · puerto '+c.ports[0]:''} · acceso ${c.access}</p>
     </div>`).join('');
@@ -645,9 +698,12 @@ function gpuIndexSel(){
 }
 function updateRecursos(){
   const card = document.getElementById('recursos-card');
-  const recursoTypes = ['colab','python','vscode','matlab'];
+  const recursoTypes = ['colab','python','vscode','matlab','playground'];
   if (!selType || !recursoTypes.includes(selType)) { card.style.display='none'; return; }
   card.style.display='block';
+  const esPg = selType === 'playground';
+  // El playground es compartido: nunca monta home y no usa contraseña
+  document.getElementById('res-home').style.display = esPg ? 'none' : '';
   // Contraseña configurable para vscode/matlab (vacío = default k3slab)
   const showPass = (selType === 'vscode' || selType === 'matlab');
   document.getElementById('res-pass').style.display = showPass ? '' : 'none';
@@ -656,8 +712,8 @@ function updateRecursos(){
   const node = (lastNodes||[]).find(x=>x.name===selNode);
   const n = node?.gpu_count ?? Math.max(0, ...(lastNodes||[]).filter(x=>x.status==='Ready').map(x=>x.gpu_count||0));
   renderGpuChips(n, gpuIndexSel());
-  // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario
-  document.getElementById('opt-home').checked = (selType !== 'python');
+  // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario; playground nunca
+  document.getElementById('opt-home').checked = (selType !== 'python' && !esPg);
 }
 function updateGpuSelect(){
   selGpu = document.getElementById('opt-gpu').checked;
@@ -672,7 +728,7 @@ function updateGpuSelect(){
 async function launch(){
   try {
     const body = {catalog_id: selType,
-                  mount_home: document.getElementById('opt-home').checked};
+                  mount_home: selType==='playground' ? false : document.getElementById('opt-home').checked};
     if (selectHostChecked()) body.node_name = selNode; // si no: k3s asigna por balanceo
     const pw = (document.getElementById('opt-pass').value || '').trim();
     if (pw) body.password = pw;
@@ -687,22 +743,43 @@ async function launch(){
 }
 
 /* ---------- admin ---------- */
+/* Panel DEV con búsqueda y filtros (usuario / nodo / tipo / estado) */
+let _admData = null;
 async function loadAdmin(){
   try {
-    const o = await api('/admin/overview');
-    document.getElementById('admin-summary').textContent =
-      `Total: ${o.total_envs} · RUNNING: ${o.por_estado.running||0} · STOPPED: ${o.por_estado.stopped||0}`;
-    const rows = o.envs.map(e => `<tr>
+    _admData = await api('/admin/overview');
+    renderAdmin();
+  } catch(e){ toast(e.message, false); }
+}
+function renderAdmin(){
+  if (!_admData) return;
+  const o = _admData;
+  const q = (document.getElementById('adm-q').value||'').toLowerCase().trim();
+  const fu = document.getElementById('adm-user').value;
+  const fn = document.getElementById('adm-node').value;
+  const ft = document.getElementById('adm-type').value;
+  const fs = document.getElementById('adm-status').value;
+  _fillSel('adm-user', o.envs.map(e=>e.owner), 'Usuario: todos');
+  _fillSel('adm-node', o.envs.map(e=>e.node||'—'), 'Nodo: todos');
+  _fillSel('adm-type', o.envs.map(e=>e.type), 'Tipo: todos');
+  _fillSel('adm-status', ['running','stopped'], 'Estado: todas');
+  const match = txt => !q || txt.toLowerCase().includes(q);
+  const envs = o.envs.filter(e => (!fu||e.owner===fu) && (!fn||e.node===fn) &&
+    (!ft||e.type===ft) && (!fs||e.status===fs) &&
+    match(e.owner+' '+e.name+' '+(e.node||'')+' '+e.type));
+  document.getElementById('admin-summary').textContent =
+    `Total: ${o.total_envs} · RUNNING: ${o.por_estado.running||0} · STOPPED: ${o.por_estado.stopped||0}` +
+    (envs.length !== o.envs.length ? ` · mostrando ${envs.length}` : '');
+  const rows = envs.map(e => `<tr>
       <td>${e.owner}</td><td>${e.name}</td><td>${e.type}</td><td>${e.node}</td>
       <td><span class="badge ${e.status}">${e.status.toUpperCase()}</span></td>
       <td>${(e.type==='vscode'||e.type==='matlab') ? (e.password ? `<b>${e.password}</b>${e.password==='k3slab'?' <span class="muted">(default)</span>':''}` : '<span class="muted">k3slab (default)</span>') : '—'}</td>
       <td>${e.nodeport||'—'}</td><td>${fmt(e.last_activity)}</td>
-      <td>${e.type==='colab'?'(colab)':(e.url?`<a href="${e.url}" target="_blank">abrir ↗</a>`:'—')}</td>
+      <td>${(e.type==='colab'||e.type==='playground')?'(colab)':(e.url?`<a href="${e.url}" target="_blank">abrir ↗</a>`:'—')}</td>
       <td>${e.status==='running'?`<button onclick="act(${e.id},'stop')">Detener</button> `:''}
           <button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button></td></tr>`).join('');
-    document.getElementById('admin-table').innerHTML =
-      '<tr><th>Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>Password</th><th>NodePort</th><th>Últ. actividad</th><th>URL</th><th>Acciones</th></tr>' + rows;
-  } catch(e){ toast(e.message, false); }
+  document.getElementById('admin-table').innerHTML =
+    '<tr><th>Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>Password</th><th>NodePort</th><th>Últ. actividad</th><th>URL</th><th>Acciones</th></tr>' + rows;
 }
 async function runLifecycle(){
   try {
@@ -719,34 +796,56 @@ function _bar(pct){
   const c = p>80 ? 'var(--red)' : p>60 ? 'var(--yellow)' : 'var(--green)';
   return `<div style="background:var(--bg);border-radius:4px;height:8px;overflow:hidden;margin-top:4px"><div style="width:${p}%;height:100%;background:${c}"></div></div>`;
 }
+/* Panel dev: actividad con búsqueda y filtros (usuario / nodo / tipo / estado) */
+let _actData = {sesiones:[], entornos:[]};
 async function loadActivity(){
-  const el = document.getElementById('activity-body');
   try {
-    const a = await api('/admin/activity');
-    const byUser = {};
-    for (const s of a.sesiones){ (byUser[s.user] ||= []).push(s); }
-    const running = {};
-    for (const e of a.entornos){ if (e.status==='running'){ (running[e.owner] ||= []).push(e); } }
-    const users = [...new Set([...Object.keys(byUser), ...Object.keys(running)])].sort();
-    if (!users.length){
-      el.innerHTML = '<span class="muted">Nadie conectado ni entornos corriendo ahora.</span>';
-      return;
-    }
-    let html = '<table style="width:100%;font-size:13px;border-collapse:collapse">';
-    html += '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Usuario</th><th>Conectado en</th><th>Entornos corriendo</th></tr>';
-    for (const u of users){
-      const conns = (byUser[u]||[]).map(s =>
-        `<div>${s.node} · ${s.tty} desde ${s.desde} · login ${s.login}</div>`).join('');
-      const envs = (running[u]||[]).map(e =>
-        `<span class="badge running" style="margin:2px 6px 2px 0">${e.name} · ${e.node}${e.gpu?' · GPU':''}</span>`).join('')
-        || '<span class="muted">—</span>';
-      html += `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${u}</b></td><td>${conns||'<span class="muted">—</span>'}</td><td>${envs}</td></tr>`;
-    }
-    html += '</table>';
-    el.innerHTML = html;
+    _actData = await api('/admin/activity');
+    renderActivity();
   } catch (err) {
-    el.innerHTML = '<span class="muted">Sin datos: '+err.message+'</span>';
+    document.getElementById('activity-body').innerHTML = '<span class="muted">Sin datos: '+err.message+'</span>';
   }
+}
+function _fillSel(id, values, label){
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${label}</option>` +
+    [...new Set(values)].sort().map(v=>`<option${v===cur?' selected':''}>${v}</option>`).join('');
+}
+function renderActivity(){
+  const el = document.getElementById('activity-body');
+  const q = (document.getElementById('act-q').value||'').toLowerCase().trim();
+  const fu = document.getElementById('act-user').value;
+  const fn = document.getElementById('act-node').value;
+  const ft = document.getElementById('act-type').value;
+  const fs = document.getElementById('act-status').value;
+  _fillSel('act-user', [..._actData.sesiones.map(s=>s.user), ..._actData.entornos.map(e=>e.owner)], 'Usuario: todos');
+  _fillSel('act-node', [..._actData.sesiones.map(s=>s.node), ..._actData.entornos.map(e=>e.node||'—')], 'Nodo: todos');
+  _fillSel('act-type', _actData.entornos.map(e=>e.type), 'Tipo: todos');
+  _fillSel('act-status', ['running','creating','stopped'], 'Estado: todos');
+  const match = txt => !q || txt.toLowerCase().includes(q);
+  const sesiones = _actData.sesiones.filter(s => (!fu||s.user===fu) && (!fn||s.node===fn) &&
+    match(s.user+' '+s.node+' '+s.tty));
+  const entornos = _actData.entornos.filter(e => (!fu||e.owner===fu) && (!fn||e.node===fn) &&
+    (!ft||e.type===ft) && (!fs||e.status===fs) &&
+    match(e.owner+' '+e.name+' '+(e.node||'')+' '+e.type));
+  let html = '';
+  // Conexiones (sesiones SSH en los nodos)
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Conexiones activas</b><span class="muted" style="font-size:12px">${sesiones.length} sesión(es)</span></div>`;
+  html += !sesiones.length ? '<div class="muted">Sin conexiones con estos filtros.</div>' :
+    '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">' +
+    '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Usuario</th><th>Nodo</th><th>TTY</th><th>Desde</th><th>Login</th><th>Idle</th></tr>' +
+    sesiones.map(s => `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${s.user}</b></td><td>${s.node}</td><td>${s.tty}</td><td>${s.desde}</td><td>${s.login}</td><td>${s.idle||'—'}</td></tr>`).join('') +
+    '</table>';
+  // Entornos (estado real del clúster)
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Entornos</b><span class="muted" style="font-size:12px">${entornos.length} entorno(s)</span></div>`;
+  html += !entornos.length ? '<div class="muted">Sin entornos con estos filtros.</div>' :
+    '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
+    '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>GPU</th></tr>' +
+    entornos.map(e => `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${e.owner}</b></td><td>${e.name}</td><td>${e.type}</td><td>${e.node||'—'}</td><td><span class="badge ${e.status}">${e.status}</span></td><td>${e.gpu?'✓':''}</td></tr>`).join('') +
+    '</table>';
+  el.innerHTML = html;
+  el.classList.remove('muted');
 }
 async function loadServers(){
   try {

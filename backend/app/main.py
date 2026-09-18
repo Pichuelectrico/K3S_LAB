@@ -37,6 +37,10 @@ def startup():
          "nvcr.io/partners/matlab:r2024a", "4", "16Gi", True, "6080", "web", ""),
         ("python", "Python container", "Consola Python (kubectl exec)",
          "python:3.12", "2", "4Gi", False, "", "console", ""),
+        ("playground", "Playground · Colab",
+         "Notebook Colab COMPARTIDO para todos los estudiantes (sin home) — solo lo crean los devs",
+         "us-docker.pkg.dev/colab-images/public/runtime:latest", "2", "8Gi", True,
+         "8080", "colab", ""),
     ]
     db = SessionLocal()
     for cid, name, desc, image, cpu, mem, gpu, ports, access, envj in seed_catalog:
