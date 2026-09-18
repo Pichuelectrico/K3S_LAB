@@ -1,905 +1,2208 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>K3S Lab</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#070d1a;--panel:#0d1526;--panel-2:#111c31;--border:#1d2942;
-  --fg:#e8eef7;--muted:#7c8aa5;
-  --accent:#e11d48;--accent-2:#fb7185;
-  --green:#34d399;--blue:#60a5fa;--yellow:#fbbf24;--red:#fb7185;
-}
-*{box-sizing:border-box;margin:0;padding:0;
-  font-family:'Sora',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-code,pre,.mono,.badge,.brand-context,.chip{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace}
-body{background:
-  radial-gradient(1000px 500px at 85% -10%, rgba(225,29,72,.10), transparent 60%),
-  radial-gradient(800px 400px at -10% 110%, rgba(96,165,250,.07), transparent 60%),
-  var(--bg);
-  color:var(--fg);min-height:100vh}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Gestor de entornos de cómputo · USFQ AI Servers"
+    />
+    <meta name="author" content="Joshua Reinoso" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="google" content="notranslate" />
+    <title>K3S Lab</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070d1a;
+        --panel: #0d1526;
+        --panel-2: #111c31;
+        --border: #1d2942;
+        --fg: #e8eef7;
+        --muted: #7c8aa5;
+        --accent: #e11d48;
+        --accent-2: #fb7185;
+        --green: #34d399;
+        --blue: #60a5fa;
+        --yellow: #fbbf24;
+        --red: #fb7185;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family:
+          "Sora",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      code,
+      pre,
+      .mono,
+      .badge,
+      .brand-context,
+      .chip {
+        font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+      }
+      body {
+        background:
+          radial-gradient(
+            1000px 500px at 85% -10%,
+            rgba(225, 29, 72, 0.1),
+            transparent 60%
+          ),
+          radial-gradient(
+            800px 400px at -10% 110%,
+            rgba(96, 165, 250, 0.07),
+            transparent 60%
+          ),
+          var(--bg);
+        color: var(--fg);
+        min-height: 100vh;
+      }
 
-/* ---------- header (diseño del mockup) ---------- */
-.app-header{position:sticky;top:0;z-index:50;
-  background:rgba(7,13,26,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--border)}
-.app-header.dev{border-bottom:1px solid rgba(225,29,72,.35)}
-.header-inner{max-width:1180px;margin:0 auto;padding:10px 20px;
-  display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg)}
-.brand-mark{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
-  background:linear-gradient(145deg,var(--accent),#9f1239);
-  box-shadow:0 6px 18px rgba(225,29,72,.35)}
-.brand-mark svg{width:20px;height:20px}
-.brand-name{font-weight:800;letter-spacing:.3px;font-size:16px}
-.brand-name span{color:var(--accent-2)}
-.brand-context{font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--muted);
-  border:1px solid var(--border);padding:3px 8px;border-radius:999px;text-transform:uppercase}
-.nav{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
-.nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;
-  padding:8px 14px;border-radius:999px;border:1px solid transparent;transition:.15s}
-.nav a:hover{color:var(--fg);border-color:var(--border);background:var(--panel-2)}
-.nav a.on{color:var(--fg);background:var(--panel-2);border-color:var(--border);
-  box-shadow:inset 0 0 0 1px rgba(225,29,72,.25)}
-.huser{display:flex;align-items:center;gap:10px}
-.uname{font-size:13px;font-weight:600;color:var(--fg)}
+      /* ---------- header (diseño del mockup) ---------- */
+      .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(7, 13, 26, 0.78);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+      }
+      .app-header.dev {
+        border-bottom: 1px solid rgba(225, 29, 72, 0.35);
+      }
+      .header-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--fg);
+      }
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(145deg, var(--accent), #9f1239);
+        box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35);
+      }
+      .brand-mark svg {
+        width: 20px;
+        height: 20px;
+      }
+      .brand-name {
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        font-size: 16px;
+      }
+      .brand-name span {
+        color: var(--accent-2);
+      }
+      .brand-context {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        padding: 3px 8px;
+        border-radius: 999px;
+        text-transform: uppercase;
+      }
+      .nav {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-left: auto;
+      }
+      .nav a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        transition: 0.15s;
+      }
+      .nav a:hover {
+        color: var(--fg);
+        border-color: var(--border);
+        background: var(--panel-2);
+      }
+      .nav a.on {
+        color: var(--fg);
+        background: var(--panel-2);
+        border-color: var(--border);
+        box-shadow: inset 0 0 0 1px rgba(225, 29, 72, 0.25);
+      }
+      .huser {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .uname {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--fg);
+      }
 
-/* ---------- botones ---------- */
-button{cursor:pointer;font-weight:600;font-size:13px;color:var(--fg);
-  background:var(--panel-2);border:1px solid var(--border);
-  padding:8px 14px;border-radius:10px;transition:.15s}
-button:hover{border-color:#2c3e63;transform:translateY(-1px)}
-button.primary{background:var(--accent);border-color:var(--accent);
-  box-shadow:0 6px 16px rgba(225,29,72,.28)}
-button.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
-button.danger{color:var(--accent-2);border-color:rgba(225,29,72,.35)}
-button.danger:hover{border-color:var(--accent);background:rgba(225,29,72,.08);transform:none}
-button:disabled{opacity:.45;cursor:not-allowed;transform:none}
-.workspace-switch{color:var(--muted)}
-.workspace-switch:hover{color:var(--fg)}
+      /* ---------- botones ---------- */
+      button {
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--fg);
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        padding: 8px 14px;
+        border-radius: 10px;
+        transition: 0.15s;
+      }
+      button:hover {
+        border-color: #2c3e63;
+        transform: translateY(-1px);
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 6px 16px rgba(225, 29, 72, 0.28);
+      }
+      button.primary:hover {
+        background: var(--accent-2);
+        border-color: var(--accent-2);
+      }
+      button.danger {
+        color: var(--accent-2);
+        border-color: rgba(225, 29, 72, 0.35);
+      }
+      button.danger:hover {
+        border-color: var(--accent);
+        background: rgba(225, 29, 72, 0.08);
+        transform: none;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .workspace-switch {
+        color: var(--muted);
+      }
+      .workspace-switch:hover {
+        color: var(--fg);
+      }
 
-/* ---------- badges ---------- */
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;
-  font-size:10.5px;font-weight:700;letter-spacing:.6px}
-.badge.dev{background:rgba(225,29,72,.12);color:var(--accent-2);border:1px solid rgba(225,29,72,.35)}
-.badge.gpu{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.35)}
-.badge.shared{background:rgba(96,165,250,.14);color:var(--blue);border:1px solid rgba(96,165,250,.35)}
-.badge.student{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.3)}
-.badge.running{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.3)}
-.badge.creating{background:rgba(251,191,36,.12);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
-.badge.error{background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.3)}
-.badge.stopped{background:rgba(124,138,165,.12);color:var(--muted);border:1px solid var(--border)}
+      /* ---------- badges ---------- */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+      }
+      .badge.dev {
+        background: rgba(225, 29, 72, 0.12);
+        color: var(--accent-2);
+        border: 1px solid rgba(225, 29, 72, 0.35);
+      }
+      .badge.gpu {
+        background: rgba(167, 139, 250, 0.14);
+        color: #c4b5fd;
+        border: 1px solid rgba(167, 139, 250, 0.35);
+      }
+      .badge.shared {
+        background: rgba(96, 165, 250, 0.14);
+        color: var(--blue);
+        border: 1px solid rgba(96, 165, 250, 0.35);
+      }
+      .badge.student {
+        background: rgba(52, 211, 153, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+      }
+      .badge.running {
+        background: rgba(52, 211, 153, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+      }
+      .badge.creating {
+        background: rgba(251, 191, 36, 0.12);
+        color: var(--yellow);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+      }
+      .badge.error {
+        background: rgba(251, 113, 133, 0.12);
+        color: var(--red);
+        border: 1px solid rgba(251, 113, 133, 0.3);
+      }
+      .badge.stopped {
+        background: rgba(124, 138, 165, 0.12);
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
 
-/* filtros compactos (actividad + panel dev) */
-.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-.filters input,.filters select{background:transparent;border:1px solid var(--border);color:var(--muted);
-  border-radius:99px;padding:3px 11px;font-size:12px;height:26px;outline:none;
-  transition:border-color .15s,color .15s;appearance:none;-webkit-appearance:none;cursor:pointer}
-.filters input{flex:1;min-width:150px;max-width:250px;color:var(--text);cursor:text}
-.filters input::placeholder{color:var(--muted)}
-.filters input:focus,.filters select:focus{border-color:var(--accent-2);color:var(--text)}
-.filters select{max-width:150px}
-.filters select option{background:#0d1526;color:var(--text)}
+      /* filtros compactos (actividad + panel dev) */
+      .filters {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .filters input,
+      .filters select {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 99px;
+        padding: 3px 11px;
+        font-size: 12px;
+        height: 26px;
+        outline: none;
+        transition:
+          border-color 0.15s,
+          color 0.15s;
+        appearance: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+      }
+      .filters input {
+        flex: 1;
+        min-width: 150px;
+        max-width: 250px;
+        color: var(--text);
+        cursor: text;
+      }
 
-/* ---------- layout ---------- */
-main{max-width:1180px;margin:0 auto;padding:26px 20px}
-.view{display:none}.view.active{display:block}
-h2{font-size:16px;margin-bottom:14px;color:var(--fg)}
-.card{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 40%),var(--panel);
-  border:1px solid var(--border);border-radius:12px;padding:16px;
-  box-shadow:0 10px 24px rgba(2,6,17,.35)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.muted{color:var(--muted);font-size:12px}
-input,select{background:var(--panel-2);border:1px solid var(--border);color:var(--fg);
-  padding:10px 12px;border-radius:10px;font-size:14px;width:100%}
-.login-box{max-width:380px;margin:10vh auto;text-align:center}
-.login-box .card{padding:30px}
-.login-box input{margin:6px 0;text-align:center}
-.login-box button{width:100%;margin-top:12px}
-.err{color:var(--red);font-size:13px;margin-top:8px;min-height:18px}
-.env-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.type-card,.node-card{cursor:pointer;border:1px solid var(--border);border-radius:12px;
-  padding:14px;background:var(--panel);transition:.15s}
-.type-card:hover,.node-card:hover{border-color:#2c3e63;transform:translateY(-2px)}
-.type-card.sel,.node-card.sel{border-color:var(--accent);
-  background:linear-gradient(180deg,rgba(225,29,72,.08),transparent),var(--panel)}
-.bar{height:8px;background:var(--panel-2);border-radius:999px;overflow:hidden;margin:6px 0}
-.bar i{display:block;height:100%;background:var(--green)}
-.bar i.warn{background:var(--yellow)}
-.bar i.full{background:var(--red)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
-th{color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.6px;text-transform:uppercase}
-a{color:var(--blue);text-decoration:none}
-.toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--green);
-  padding:12px 18px;border-radius:10px;font-size:13px;display:none;z-index:99;
-  box-shadow:0 10px 24px rgba(2,6,17,.5)}
-.steps{display:flex;gap:8px;margin-bottom:16px;font-size:12px;color:var(--muted);flex-wrap:wrap}
-.modal{position:fixed;inset:0;background:rgba(2,6,17,.85);display:none;align-items:center;
-  justify-content:center;z-index:50;padding:24px;backdrop-filter:blur(4px)}
-.modal .card{max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
-.modal pre{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;
-  padding:10px 12px;font-size:12px;color:var(--green);overflow-x:auto;margin:6px 0;
-  white-space:pre-wrap;word-break:break-all}
-.copyrow{display:flex;gap:8px;align-items:center}
-.copyrow pre{flex:1}
-.copyrow button{white-space:nowrap;font-size:12px;padding:6px 10px}
+      /* bloques terminales de `who` (salida cruda por nodo) */
+      .who-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 8px;
+      }
+      .who-term {
+        background: #050a14;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        min-width: 0;
+      }
+      .who-term b {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .who-term pre {
+        margin: 6px 0 0;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        line-height: 1.6;
+        color: var(--green);
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .filters input::placeholder {
+        color: var(--muted);
+      }
+      .filters input:focus,
+      .filters select:focus {
+        border-color: var(--accent-2);
+        color: var(--text);
+      }
+      .filters select {
+        max-width: 150px;
+      }
+      .filters select option {
+        background: #0d1526;
+        color: var(--text);
+      }
 
-/* ---------- 2 · Recursos: grid de toggle-cards ---------- */
-.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px}
-.res-card{position:relative;cursor:pointer;border:1px solid var(--border);border-radius:12px;
-  padding:14px;background:var(--panel);transition:border-color .18s,transform .18s,box-shadow .18s;
-  display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.res-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
-  background:var(--accent);opacity:0;transition:opacity .18s}
-.res-card:hover{border-color:#2c3e63;transform:translateY(-2px)}
-.res-card:has(input:checked),.res-card.on{border-color:rgba(225,29,72,.45);
-  box-shadow:0 0 0 1px rgba(225,29,72,.25),0 8px 20px rgba(225,29,72,.08)}
-.res-card:has(input:checked)::before,.res-card.on::before{opacity:1}
-.res-card input[type=checkbox]{position:absolute;opacity:0;pointer-events:none}
-.res-head{display:flex;align-items:center;gap:10px}
-.res-ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;
-  background:var(--panel-2);border:1px solid var(--border);transition:.18s}
-.res-card:has(input:checked) .res-ico{background:rgba(225,29,72,.12);border-color:rgba(225,29,72,.4)}
-.res-ico svg{width:17px;height:17px}
-.res-title{font-size:13px;font-weight:700;letter-spacing:.2px}
-.res-sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.45}
-.res-card input[type=text]{margin-top:auto}
-/* switch */
-.switch{margin-left:auto;flex-shrink:0;width:36px;height:20px;border-radius:999px;
-  background:var(--panel-2);border:1px solid var(--border);position:relative;transition:.18s}
-.switch::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;
-  border-radius:50%;background:var(--muted);transition:.18s}
-.res-card:has(input:checked) .switch{background:var(--accent);border-color:var(--accent)}
-.res-card:has(input:checked) .switch::after{left:18px;background:#fff}
-/* chips segmentados (índice de GPU) */
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);
-  background:var(--panel-2);border:1px solid var(--border);padding:5px 11px;border-radius:999px;
-  transition:.15s}
-.chip:hover{color:var(--fg);border-color:#2c3e63}
-.chip.on{color:#fff;background:var(--accent);border-color:var(--accent);
-  box-shadow:0 3px 10px rgba(225,29,72,.3)}
+      /* ---------- layout ---------- */
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 26px 20px;
+      }
+      .view {
+        display: none;
+      }
+      .view.active {
+        display: block;
+      }
+      h2 {
+        font-size: 16px;
+        margin-bottom: 14px;
+        color: var(--fg);
+      }
+      .card {
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 40%),
+          var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(2, 6, 17, 0.35);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 14px;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      input,
+      select {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 14px;
+        width: 100%;
+      }
+      .login-box {
+        max-width: 380px;
+        margin: 10vh auto;
+        text-align: center;
+      }
+      .login-box .card {
+        padding: 30px;
+      }
+      .login-box input {
+        margin: 6px 0;
+        text-align: center;
+      }
+      .login-box button {
+        width: 100%;
+        margin-top: 12px;
+      }
+      .err {
+        color: var(--red);
+        font-size: 13px;
+        margin-top: 8px;
+        min-height: 18px;
+      }
+      .env-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .type-card,
+      .node-card {
+        cursor: pointer;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        background: var(--panel);
+        transition: 0.15s;
+      }
+      .type-card:hover,
+      .node-card:hover {
+        border-color: #2c3e63;
+        transform: translateY(-2px);
+      }
+      .type-card.sel,
+      .node-card.sel {
+        border-color: var(--accent);
+        background:
+          linear-gradient(180deg, rgba(225, 29, 72, 0.08), transparent),
+          var(--panel);
+      }
+      .bar {
+        height: 8px;
+        background: var(--panel-2);
+        border-radius: 999px;
+        overflow: hidden;
+        margin: 6px 0;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: var(--green);
+      }
+      .bar i.warn {
+        background: var(--yellow);
+      }
+      .bar i.full {
+        background: var(--red);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--panel);
+        border: 1px solid var(--green);
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 13px;
+        display: none;
+        z-index: 99;
+        box-shadow: 0 10px 24px rgba(2, 6, 17, 0.5);
+      }
+      .steps {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        color: var(--muted);
+        flex-wrap: wrap;
+      }
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 17, 0.85);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        padding: 24px;
+        backdrop-filter: blur(4px);
+      }
+      .modal .card {
+        max-width: 580px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      .modal pre {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--green);
+        overflow-x: auto;
+        margin: 6px 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .copyrow {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .copyrow pre {
+        flex: 1;
+      }
+      .copyrow button {
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 6px 10px;
+      }
 
-/* ---------- animaciones de entrada ---------- */
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.view.active>*{animation:fadeUp .4s cubic-bezier(.2,.7,.3,1) backwards}
-.view.active>*:nth-child(1){animation-delay:.02s}
-.view.active>*:nth-child(2){animation-delay:.07s}
-.view.active>*:nth-child(3){animation-delay:.12s}
-.view.active>*:nth-child(4){animation-delay:.17s}
-.view.active>*:nth-child(5){animation-delay:.22s}
-.view.active>*:nth-child(6){animation-delay:.27s}
-/* tarjetas dinámicas: entran escalonadas solo en la carga de la vista (clase .entering) */
-.view.active{animation:viewIn .25s ease}
-@keyframes viewIn{from{opacity:0}to{opacity:1}}
-.view.entering .card,.view.entering .type-card,.view.entering .node-card{animation:fadeUp .4s cubic-bezier(.2,.7,.3,1) backwards}
-.view.entering .card:nth-child(2),.view.entering .type-card:nth-child(2),.view.entering .node-card:nth-child(2){animation-delay:.06s}
-.view.entering .card:nth-child(3),.view.entering .type-card:nth-child(3),.view.entering .node-card:nth-child(3){animation-delay:.12s}
-.view.entering .card:nth-child(4),.view.entering .type-card:nth-child(4),.view.entering .node-card:nth-child(4){animation-delay:.18s}
-.view.entering .card:nth-child(5),.view.entering .type-card:nth-child(5),.view.entering .node-card:nth-child(5){animation-delay:.24s}
-.view.entering .card:nth-child(n+6),.view.entering .type-card:nth-child(n+6),.view.entering .node-card:nth-child(n+6){animation-delay:.3s}
+      /* ---------- 2 · Recursos: grid de toggle-cards ---------- */
+      .res-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .res-card {
+        position: relative;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        background: var(--panel);
+        transition:
+          border-color 0.18s,
+          transform 0.18s,
+          box-shadow 0.18s;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow: hidden;
+      }
+      .res-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--accent);
+        opacity: 0;
+        transition: opacity 0.18s;
+      }
+      .res-card:hover {
+        border-color: #2c3e63;
+        transform: translateY(-2px);
+      }
+      .res-card:has(input:checked),
+      .res-card.on {
+        border-color: rgba(225, 29, 72, 0.45);
+        box-shadow:
+          0 0 0 1px rgba(225, 29, 72, 0.25),
+          0 8px 20px rgba(225, 29, 72, 0.08);
+      }
+      .res-card:has(input:checked)::before,
+      .res-card.on::before {
+        opacity: 1;
+      }
+      .res-card input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .res-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .res-ico {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        transition: 0.18s;
+      }
+      .res-card:has(input:checked) .res-ico {
+        background: rgba(225, 29, 72, 0.12);
+        border-color: rgba(225, 29, 72, 0.4);
+      }
+      .res-ico svg {
+        width: 17px;
+        height: 17px;
+      }
+      .res-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      .res-sub {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-top: 2px;
+        line-height: 1.45;
+      }
+      .res-card input[type="text"] {
+        margin-top: auto;
+      }
+      /* switch */
+      .switch {
+        margin-left: auto;
+        flex-shrink: 0;
+        width: 36px;
+        height: 20px;
+        border-radius: 999px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        position: relative;
+        transition: 0.18s;
+      }
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--muted);
+        transition: 0.18s;
+      }
+      .res-card:has(input:checked) .switch {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .res-card:has(input:checked) .switch::after {
+        left: 18px;
+        background: #fff;
+      }
+      /* chips segmentados (índice de GPU) */
+      .chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        padding: 5px 11px;
+        border-radius: 999px;
+        transition: 0.15s;
+      }
+      .chip:hover {
+        color: var(--fg);
+        border-color: #2c3e63;
+      }
+      .chip.on {
+        color: #fff;
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 3px 10px rgba(225, 29, 72, 0.3);
+      }
 
-/* ---------- pantalla de carga (splash) ---------- */
-#boot{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:18px;transition:opacity .5s ease}
-#boot.off{opacity:0;pointer-events:none}
-.boot-mark{width:58px;height:58px;border-radius:14px;display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  box-shadow:0 10px 34px -8px rgba(225,29,72,.5);animation:bootPulse 1.5s ease-in-out infinite}
-.boot-mark svg{width:30px;height:30px}
-.boot-spin{width:26px;height:26px;border-radius:50%;border:3px solid rgba(255,255,255,.09);
-  border-top-color:var(--accent-2);animation:spin .8s linear infinite}
-.boot-txt{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes bootPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation:none!important;transition:none!important}
-  #boot.off{opacity:0}
-}
-</style>
-</head>
-<body>
+      /* ---------- animaciones de entrada ---------- */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .view.active > * {
+        animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+      }
+      .view.active > *:nth-child(1) {
+        animation-delay: 0.02s;
+      }
+      .view.active > *:nth-child(2) {
+        animation-delay: 0.07s;
+      }
+      .view.active > *:nth-child(3) {
+        animation-delay: 0.12s;
+      }
+      .view.active > *:nth-child(4) {
+        animation-delay: 0.17s;
+      }
+      .view.active > *:nth-child(5) {
+        animation-delay: 0.22s;
+      }
+      .view.active > *:nth-child(6) {
+        animation-delay: 0.27s;
+      }
+      /* tarjetas dinámicas: entran escalonadas solo en la carga de la vista (clase .entering) */
+      .view.active {
+        animation: viewIn 0.25s ease;
+      }
+      @keyframes viewIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .view.entering .card,
+      .view.entering .type-card,
+      .view.entering .node-card {
+        animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+      }
+      .view.entering .card:nth-child(2),
+      .view.entering .type-card:nth-child(2),
+      .view.entering .node-card:nth-child(2) {
+        animation-delay: 0.06s;
+      }
+      .view.entering .card:nth-child(3),
+      .view.entering .type-card:nth-child(3),
+      .view.entering .node-card:nth-child(3) {
+        animation-delay: 0.12s;
+      }
+      .view.entering .card:nth-child(4),
+      .view.entering .type-card:nth-child(4),
+      .view.entering .node-card:nth-child(4) {
+        animation-delay: 0.18s;
+      }
+      .view.entering .card:nth-child(5),
+      .view.entering .type-card:nth-child(5),
+      .view.entering .node-card:nth-child(5) {
+        animation-delay: 0.24s;
+      }
+      .view.entering .card:nth-child(n + 6),
+      .view.entering .type-card:nth-child(n + 6),
+      .view.entering .node-card:nth-child(n + 6) {
+        animation-delay: 0.3s;
+      }
 
-<!-- pantalla de carga -->
-<div id="boot" aria-hidden="true">
-  <div class="boot-mark">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
-      <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
-      <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
-    </svg>
-  </div>
-  <div class="boot-spin"></div>
-  <div class="boot-txt">Cargando K3S Lab</div>
-</div>
-
-<header class="app-header" id="hdr" style="display:none">
-  <div class="header-inner">
-    <a class="brand" href="#" onclick="show('dash');return false">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
-          <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
+      /* ---------- pantalla de carga (splash) ---------- */
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        transition: opacity 0.5s ease;
+      }
+      #boot.off {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot-mark {
+        width: 58px;
+        height: 58px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 10px 34px -8px rgba(225, 29, 72, 0.5);
+        animation: bootPulse 1.5s ease-in-out infinite;
+      }
+      .boot-mark svg {
+        width: 30px;
+        height: 30px;
+      }
+      .boot-spin {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.09);
+        border-top-color: var(--accent-2);
+        animation: spin 0.8s linear infinite;
+      }
+      .boot-txt {
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes bootPulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+        #boot.off {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- pantalla de carga -->
+    <div id="boot" aria-hidden="true">
+      <div class="boot-mark">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <circle cx="12" cy="5" r="2.2" />
+          <circle cx="5" cy="18" r="2.2" />
+          <circle cx="19" cy="18" r="2.2" />
+          <path d="M12 7.2 5.8 16M12 7.2 18.2 16" />
         </svg>
-      </span>
-      <span class="brand-name">K3S <span>Lab</span></span>
-      <span class="brand-context" id="hctx"></span>
-    </a>
-    <nav class="nav" id="nav">
-      <a href="#" onclick="show('dash');return false" data-v="dash">Mis entornos</a>
-      <a href="#" onclick="show('nuevo');return false" data-v="nuevo">Nuevo entorno</a>
-      <a href="#" onclick="show('servers');return false" data-v="servers" class="nav-dev">Equipos</a>
-      <a href="#" onclick="show('admin');return false" data-v="admin" class="nav-dev">Panel DEV</a>
-    </nav>
-    <div class="huser">
-      <span class="uname" id="hname"></span>
-      <span class="badge" id="hrole"></span>
-      <button class="workspace-switch" onclick="logout()">Salir</button>
+      </div>
+      <div class="boot-spin"></div>
+      <div class="boot-txt">Cargando K3S Lab</div>
     </div>
-  </div>
-</header>
 
-<main>
-  <!-- LOGIN -->
-  <section id="v-login" class="view">
-    <div class="login-box">
+    <header class="app-header" id="hdr" style="display: none">
+      <div class="header-inner">
+        <a
+          class="brand"
+          href="#"
+          onclick="
+            show('dash');
+            return false;
+          "
+        >
+          <span class="brand-mark" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#fff"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <circle cx="12" cy="5" r="2.2" />
+              <circle cx="5" cy="18" r="2.2" />
+              <circle cx="19" cy="18" r="2.2" />
+              <path d="M12 7.2 5.8 16M12 7.2 18.2 16" />
+            </svg>
+          </span>
+          <span class="brand-name">K3S <span>Lab</span></span>
+          <span class="brand-context" id="hctx"></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a
+            href="#"
+            onclick="
+              show('dash');
+              return false;
+            "
+            data-v="dash"
+            >Mis entornos</a
+          >
+          <a
+            href="#"
+            onclick="
+              show('nuevo');
+              return false;
+            "
+            data-v="nuevo"
+            >Nuevo entorno</a
+          >
+          <a
+            href="#"
+            onclick="
+              show('servers');
+              return false;
+            "
+            data-v="servers"
+            class="nav-dev"
+            >Equipos</a
+          >
+          <a
+            href="#"
+            onclick="
+              show('admin');
+              return false;
+            "
+            data-v="admin"
+            class="nav-dev"
+            >Panel DEV</a
+          >
+        </nav>
+        <div class="huser">
+          <span class="uname" id="hname"></span>
+          <span class="badge" id="hrole"></span>
+          <button class="workspace-switch" onclick="logout()">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- LOGIN -->
+      <section id="v-login" class="view">
+        <div class="login-box">
+          <div class="card">
+            <div
+              class="brand-mark"
+              style="margin: 0 auto 12px"
+              aria-hidden="true"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#fff"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="5" r="2.2" />
+                <circle cx="5" cy="18" r="2.2" />
+                <circle cx="19" cy="18" r="2.2" />
+                <path d="M12 7.2 5.8 16M12 7.2 18.2 16" />
+              </svg>
+            </div>
+            <h2 style="font-size: 22px; margin-bottom: 4px">
+              K3S <span style="color: var(--accent-2)">Lab</span>
+            </h2>
+            <p class="muted" style="margin-bottom: 16px">
+              Gestor de entornos de cómputo · USFQ AI Servers
+            </p>
+            <input id="l-user" placeholder="Usuario" autocomplete="username" />
+            <input
+              id="l-pass"
+              type="password"
+              placeholder="Contraseña"
+              autocomplete="current-password"
+            />
+            <button class="primary" onclick="login()">Entrar</button>
+            <div class="err" id="l-err"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DASHBOARD -->
+      <section id="v-dash" class="view">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+          "
+        >
+          <h2 id="dash-title">Mis entornos</h2>
+          <button class="primary" onclick="show('nuevo')">
+            + Nuevo entorno
+          </button>
+        </div>
+        <div class="grid" id="env-list"></div>
+      </section>
+
+      <!-- NUEVO -->
+      <section id="v-nuevo" class="view">
+        <h2>1 · Tipo de entorno</h2>
+        <div class="grid" id="type-list"></div>
+        <div
+          class="card"
+          id="recursos-card"
+          style="margin-top: 22px; display: none"
+        >
+          <b>2 · Recursos</b>
+          <span class="muted" style="margin-left: 8px"
+            >activa o desactiva según lo que necesites</span
+          >
+          <div class="res-grid">
+            <label class="res-card" id="res-gpu">
+              <input
+                type="checkbox"
+                id="opt-gpu"
+                onchange="updateGpuSelect()"
+              />
+              <div class="res-head">
+                <span class="res-ico">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--fg)"
+                    stroke-width="1.7"
+                  >
+                    <rect x="5" y="5" width="14" height="11" rx="2" />
+                    <rect x="9" y="9" width="6" height="3" rx="1" />
+                    <path d="M9 19h6M12 16v3" />
+                  </svg>
+                </span>
+                <div>
+                  <div class="res-title">GPU</div>
+                  <div class="res-sub">nvidia-smi visible · runtime NVIDIA</div>
+                </div>
+                <span class="switch" aria-hidden="true"></span>
+              </div>
+              <div
+                id="gpu-select-wrap"
+                class="chips"
+                style="display: none"
+              ></div>
+            </label>
+            <label class="res-card" id="res-home">
+              <input type="checkbox" id="opt-home" />
+              <div class="res-head">
+                <span class="res-ico">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--fg)"
+                    stroke-width="1.7"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 7.5 12 3l9 4.5V20H3V7.5Z" />
+                    <path d="M9 20v-6h6v6" />
+                  </svg>
+                </span>
+                <div>
+                  <div class="res-title">Montar /home</div>
+                  <div class="res-sub">
+                    tu carpeta del nodo persiste dentro del contenedor
+                  </div>
+                </div>
+                <span class="switch" aria-hidden="true"></span>
+              </div>
+            </label>
+            <label class="res-card" id="res-host">
+              <input
+                type="checkbox"
+                id="opt-select-host"
+                onchange="toggleHostSection()"
+              />
+              <div class="res-head">
+                <span class="res-ico">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--fg)"
+                    stroke-width="1.7"
+                  >
+                    <rect x="4" y="4" width="16" height="7" rx="2" />
+                    <rect x="4" y="13" width="16" height="7" rx="2" />
+                    <path d="M7.5 7.5h.01M7.5 16.5h.01" />
+                  </svg>
+                </span>
+                <div>
+                  <div class="res-title">Host dedicado</div>
+                  <div class="res-sub">
+                    si no lo activas, k3s asigna el nodo por balanceo de
+                    recursos
+                  </div>
+                </div>
+                <span class="switch" aria-hidden="true"></span>
+              </div>
+            </label>
+            <div class="res-card" id="res-pass" style="cursor: default">
+              <div class="res-head">
+                <span class="res-ico">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--fg)"
+                    stroke-width="1.7"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                  </svg>
+                </span>
+                <div>
+                  <div class="res-title">Contraseña</div>
+                  <div class="res-sub">
+                    del IDE (VS Code) o del escritorio VNC (MATLAB) — queda
+                    visible en el card
+                  </div>
+                </div>
+              </div>
+              <input
+                type="text"
+                id="opt-pass"
+                placeholder="vacío = k3slab (default)"
+                maxlength="40"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+        </div>
+        <div id="host-section" style="display: none; margin-top: 22px">
+          <h2>
+            3 · Nodo <span class="muted">(stats en vivo — elige dónde)</span>
+          </h2>
+          <div class="grid" id="node-list"></div>
+        </div>
+        <div style="margin-top: 18px; display: flex; gap: 10px">
+          <button onclick="show('dash')">Cancelar</button>
+          <button class="primary" id="btn-launch" onclick="launch()" disabled>
+            Lanzar entorno
+          </button>
+        </div>
+      </section>
+
+      <!-- ADMIN -->
+      <section id="v-admin" class="view">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+          "
+        >
+          <h2>Panel DEV — todos los entornos</h2>
+          <button onclick="runLifecycle()">Ejecutar ciclo de vida ahora</button>
+        </div>
+        <div id="admin-summary" class="muted" style="margin-bottom: 8px"></div>
+        <div class="filters" id="admin-filters">
+          <input
+            id="adm-q"
+            placeholder="Buscar usuario, entorno, nodo o tipo…"
+            oninput="renderAdmin()"
+          />
+          <select id="adm-user" onchange="renderAdmin()">
+            <option value="">Usuario: todos</option>
+          </select>
+          <select id="adm-node" onchange="renderAdmin()">
+            <option value="">Nodo: todos</option>
+          </select>
+          <select id="adm-type" onchange="renderAdmin()">
+            <option value="">Tipo: todos</option>
+          </select>
+          <select id="adm-status" onchange="renderAdmin()">
+            <option value="">Estado: todas</option>
+            <option>running</option>
+            <option>stopped</option>
+          </select>
+        </div>
+        <div class="card" style="overflow-x: auto">
+          <table id="admin-table"></table>
+        </div>
+      </section>
+
+      <!-- EQUIPOS (dev) -->
+      <section id="v-servers" class="view">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+          "
+        >
+          <h2>
+            Equipos — monitoreo en vivo
+            <span class="muted" style="font-size: 12px"
+              >(Prometheus del lab)</span
+            >
+          </h2>
+          <a id="grafana-link" href="#" target="_blank" rel="noopener"
+            ><button>Grafana ↗</button></a
+          >
+        </div>
+        <div id="activity-card" class="card" style="margin-bottom: 14px">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 10px;
+              flex-wrap: wrap;
+              margin-bottom: 10px;
+            "
+          >
+            <h3 style="margin: 0">
+              Actividad — quién está conectado y qué corre
+              <span class="muted" style="font-size: 12px"
+                >(sesiones de los 3 nodos + clúster)</span
+              >
+            </h3>
+            <button
+              onclick="loadActivity()"
+              title="Re-escanear sesiones y entornos"
+            >
+              ↻ Refrescar
+            </button>
+          </div>
+          <div class="filters">
+            <input
+              id="act-q"
+              placeholder="Buscar usuario, nodo o tipo…"
+              oninput="renderActivity()"
+            />
+            <select id="act-user" onchange="renderActivity()">
+              <option value="">Usuario: todos</option>
+            </select>
+            <select id="act-node" onchange="renderActivity()">
+              <option value="">Nodo: todos</option>
+            </select>
+            <select id="act-type" onchange="renderActivity()">
+              <option value="">Tipo: todos</option>
+            </select>
+            <select id="act-status" onchange="renderActivity()">
+              <option value="">Estado: todos</option>
+            </select>
+          </div>
+          <div id="activity-body" class="muted" style="font-size: 13px">
+            Cargando…
+          </div>
+        </div>
+        <div
+          id="servers-grid"
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+            gap: 14px;
+          "
+        ></div>
+      </section>
+    </main>
+
+    <nav id="subnav" style="display: none"></nav>
+    <div
+      class="modal"
+      id="connect-modal"
+      onclick="if (event.target === this) closeConnect();"
+    >
       <div class="card">
-        <div class="brand-mark" style="margin:0 auto 12px" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
-            <circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/>
-            <path d="M12 7.2 5.8 16M12 7.2 18.2 16"/>
-          </svg>
+        <h2>
+          Conectar —
+          <span id="c-tipo-title" style="color: var(--green)"
+            >Colab · Connect to a local runtime</span
+          >
+        </h2>
+        <ol id="c-steps" style="margin: 12px 0 4px 18px; font-size: 13px"></ol>
+        <div class="copyrow" id="c-ssh-copy" style="margin-top: 12px">
+          <pre id="c-ssh"></pre>
+          <button onclick="copyText('c-ssh')">Copiar</button>
         </div>
-        <h2 style="font-size:22px;margin-bottom:4px">K3S <span style="color:var(--accent-2)">Lab</span></h2>
-        <p class="muted" style="margin-bottom:16px">Gestor de entornos de cómputo · USFQ AI Servers</p>
-        <input id="l-user" placeholder="Usuario" autocomplete="username">
-        <input id="l-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
-        <button class="primary" onclick="login()">Entrar</button>
-        <div class="err" id="l-err"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DASHBOARD -->
-  <section id="v-dash" class="view">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <h2 id="dash-title">Mis entornos</h2>
-      <button class="primary" onclick="show('nuevo')">+ Nuevo entorno</button>
-    </div>
-    <div class="grid" id="env-list"></div>
-  </section>
-
-  <!-- NUEVO -->
-  <section id="v-nuevo" class="view">
-    <h2>1 · Tipo de entorno</h2>
-    <div class="grid" id="type-list"></div>
-    <div class="card" id="recursos-card" style="margin-top:22px;display:none">
-      <b>2 · Recursos</b> <span class="muted" style="margin-left:8px">activa o desactiva según lo que necesites</span>
-      <div class="res-grid">
-        <label class="res-card" id="res-gpu">
-          <input type="checkbox" id="opt-gpu" onchange="updateGpuSelect()">
-          <div class="res-head">
-            <span class="res-ico">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.7">
-                <rect x="5" y="5" width="14" height="11" rx="2"/><rect x="9" y="9" width="6" height="3" rx="1"/>
-                <path d="M9 19h6M12 16v3"/>
-              </svg>
-            </span>
-            <div>
-              <div class="res-title">GPU</div>
-              <div class="res-sub">nvidia-smi visible · runtime NVIDIA</div>
-            </div>
-            <span class="switch" aria-hidden="true"></span>
-          </div>
-          <div id="gpu-select-wrap" class="chips" style="display:none"></div>
-        </label>
-        <label class="res-card" id="res-home">
-          <input type="checkbox" id="opt-home">
-          <div class="res-head">
-            <span class="res-ico">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.7" stroke-linejoin="round">
-                <path d="M3 7.5 12 3l9 4.5V20H3V7.5Z"/><path d="M9 20v-6h6v6"/>
-              </svg>
-            </span>
-            <div>
-              <div class="res-title">Montar /home</div>
-              <div class="res-sub">tu carpeta del nodo persiste dentro del contenedor</div>
-            </div>
-            <span class="switch" aria-hidden="true"></span>
-          </div>
-        </label>
-        <label class="res-card" id="res-host">
-          <input type="checkbox" id="opt-select-host" onchange="toggleHostSection()">
-          <div class="res-head">
-            <span class="res-ico">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.7">
-                <rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>
-                <path d="M7.5 7.5h.01M7.5 16.5h.01"/>
-              </svg>
-            </span>
-            <div>
-              <div class="res-title">Host dedicado</div>
-              <div class="res-sub">si no lo activas, k3s asigna el nodo por balanceo de recursos</div>
-            </div>
-            <span class="switch" aria-hidden="true"></span>
-          </div>
-        </label>
-        <div class="res-card" id="res-pass" style="cursor:default">
-          <div class="res-head">
-            <span class="res-ico">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.7" stroke-linejoin="round">
-                <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
-              </svg>
-            </span>
-            <div>
-              <div class="res-title">Contraseña</div>
-              <div class="res-sub">del IDE (VS Code) o del escritorio VNC (MATLAB) — queda visible en el card</div>
-            </div>
-          </div>
-          <input type="text" id="opt-pass" placeholder="vacío = k3slab (default)" maxlength="40" autocomplete="off">
+        <div
+          class="copyrow"
+          id="c-exec-row"
+          style="margin-top: 12px; display: none"
+        >
+          <pre id="c-exec"></pre>
+          <button onclick="copyText('c-exec')">Copiar</button>
+        </div>
+        <p class="muted" id="c-url-row" style="margin-top: 10px; display: none">
+          URL:
+        </p>
+        <div class="copyrow" id="c-url-copy" style="display: none">
+          <pre id="c-url"></pre>
+          <button onclick="copyText('c-url')">Copiar</button>
+        </div>
+        <p
+          class="muted"
+          id="c-token-label"
+          style="margin-top: 10px; display: none"
+        >
+          Token del runtime (Colab lo pide como alternativa a la URL):
+        </p>
+        <div class="copyrow" id="c-token-row" style="display: none">
+          <pre id="c-token"></pre>
+          <button onclick="copyText('c-token')">Copiar</button>
+        </div>
+        <p
+          class="muted"
+          id="c-pass-label"
+          style="margin-top: 10px; display: none"
+        >
+          Password:
+        </p>
+        <div class="copyrow" id="c-pass-row" style="display: none">
+          <pre id="c-pass"></pre>
+          <button onclick="copyText('c-pass')">Copiar</button>
+        </div>
+        <p class="muted" id="c-note" style="margin-top: 10px"></p>
+        <div style="display: flex; justify-content: flex-end; margin-top: 14px">
+          <button class="primary" onclick="closeConnect()">Listo</button>
         </div>
       </div>
     </div>
-    <div id="host-section" style="display:none;margin-top:22px">
-      <h2>3 · Nodo <span class="muted">(stats en vivo — elige dónde)</span></h2>
-      <div class="grid" id="node-list"></div>
-    </div>
-    <div style="margin-top:18px;display:flex;gap:10px">
-      <button onclick="show('dash')">Cancelar</button>
-      <button class="primary" id="btn-launch" onclick="launch()" disabled>Lanzar entorno</button>
-    </div>
-  </section>
-
-  <!-- ADMIN -->
-  <section id="v-admin" class="view">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <h2>Panel DEV — todos los entornos</h2>
-      <button onclick="runLifecycle()">Ejecutar ciclo de vida ahora</button>
-    </div>
-    <div id="admin-summary" class="muted" style="margin-bottom:8px"></div>
-    <div class="filters" id="admin-filters">
-      <input id="adm-q" placeholder="Buscar usuario, entorno, nodo o tipo…" oninput="renderAdmin()">
-      <select id="adm-user" onchange="renderAdmin()"><option value="">Usuario: todos</option></select>
-      <select id="adm-node" onchange="renderAdmin()"><option value="">Nodo: todos</option></select>
-      <select id="adm-type" onchange="renderAdmin()"><option value="">Tipo: todos</option></select>
-      <select id="adm-status" onchange="renderAdmin()"><option value="">Estado: todas</option><option>running</option><option>stopped</option></select>
-    </div>
-    <div class="card" style="overflow-x:auto"><table id="admin-table"></table></div>
-  </section>
-
-  <!-- EQUIPOS (dev) -->
-  <section id="v-servers" class="view">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <h2>Equipos — monitoreo en vivo <span class="muted" style="font-size:12px">(Prometheus del lab)</span></h2>
-      <a id="grafana-link" href="#" target="_blank" rel="noopener"><button>Grafana ↗</button></a>
-    </div>
-    <div id="activity-card" class="card" style="margin-bottom:14px">
-      <h3 style="margin:0 0 10px">Actividad — quién está conectado y qué corre <span class="muted" style="font-size:12px">(sesiones de los 3 nodos + clúster)</span></h3>
-      <div class="filters">
-        <input id="act-q" placeholder="Buscar usuario, nodo o tipo…" oninput="renderActivity()">
-        <select id="act-user" onchange="renderActivity()"><option value="">Usuario: todos</option></select>
-        <select id="act-node" onchange="renderActivity()"><option value="">Nodo: todos</option></select>
-        <select id="act-type" onchange="renderActivity()"><option value="">Tipo: todos</option></select>
-        <select id="act-status" onchange="renderActivity()"><option value="">Estado: todos</option></select>
+    <div
+      class="modal"
+      id="kick-modal"
+      style="display: none"
+      onclick="if (event.target === this) closeKick();"
+    >
+      <div class="card" style="width: min(640px, 92vw)">
+        <h2>
+          Desconectar sesión —
+          <span id="k-title" style="color: var(--green)"></span>
+        </h2>
+        <p class="muted" style="margin: 12px 0 4px">
+          Ejecuta este comando en tu terminal — te pedirá tu contraseña de sudo
+          y cerrará todos los procesos de esa terminal:
+        </p>
+        <div class="copyrow" style="margin-top: 8px">
+          <pre id="k-cmd"></pre>
+          <button onclick="copyText('k-cmd')">Copiar</button>
+        </div>
+        <p class="muted" style="margin-top: 10px; font-size: 12px">
+          El flag <b>-t</b> asigna TTY para que sudo pueda pedirte la contraseña
+          (no hace falta regla sudoers). Luego usa <b>↻ Refrescar</b> para
+          verificar que la sesión ya no aparece.
+        </p>
+        <div style="display: flex; justify-content: flex-end; margin-top: 14px">
+          <button class="primary" onclick="closeKick()">Listo</button>
+        </div>
       </div>
-      <div id="activity-body" class="muted" style="font-size:13px">Cargando…</div>
     </div>
-    <div id="servers-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px"></div>
-  </section>
-</main>
+    <div class="toast" id="toast"></div>
 
-<nav id="subnav" style="display:none"></nav>
-<div class="modal" id="connect-modal" onclick="if(event.target===this)closeConnect()">
-  <div class="card">
-    <h2>Conectar — <span id="c-tipo-title" style="color:var(--green)">Colab · Connect to a local runtime</span></h2>
-    <ol id="c-steps" style="margin:12px 0 4px 18px;font-size:13px"></ol>
-    <div class="copyrow" id="c-ssh-copy" style="margin-top:12px">
-      <pre id="c-ssh"></pre><button onclick="copyText('c-ssh')">Copiar</button>
-    </div>
-    <div class="copyrow" id="c-exec-row" style="margin-top:12px;display:none">
-      <pre id="c-exec"></pre><button onclick="copyText('c-exec')">Copiar</button>
-    </div>
-    <p class="muted" id="c-url-row" style="margin-top:10px;display:none">URL:</p>
-    <div class="copyrow" id="c-url-copy" style="display:none">
-      <pre id="c-url"></pre><button onclick="copyText('c-url')">Copiar</button>
-    </div>
-    <p class="muted" id="c-token-label" style="margin-top:10px;display:none">Token del runtime (Colab lo pide como alternativa a la URL):</p>
-    <div class="copyrow" id="c-token-row" style="display:none">
-      <pre id="c-token"></pre><button onclick="copyText('c-token')">Copiar</button>
-    </div>
-    <p class="muted" id="c-pass-label" style="margin-top:10px;display:none">Password:</p>
-    <div class="copyrow" id="c-pass-row" style="display:none">
-      <pre id="c-pass"></pre><button onclick="copyText('c-pass')">Copiar</button>
-    </div>
-    <p class="muted" id="c-note" style="margin-top:10px"></p>
-    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="primary" onclick="closeConnect()">Listo</button></div>
-  </div>
-</div>
-<div class="toast" id="toast"></div>
+    <script>
+      const API = location.origin + "/api";
+      let selType = null,
+        selNode = null,
+        selGpu = false,
+        lastNodes = [];
 
-<script>
-const API = location.origin + '/api';
-let selType = null, selNode = null, selGpu = false, lastNodes = [];
+      /* Logos simplificados de los tipos de entorno */
+      const ICONS = {
+        colab:
+          '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><rect width="24" height="24" rx="6" fill="#F9AB00"/><path d="M16.4 15.8a5.2 5.2 0 1 1 0-7.6" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round"/></svg>',
+        matlab:
+          '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><rect width="24" height="24" rx="6" fill="#003B5C"/><path d="M4.5 18.5C7 11 11 6 19.5 4.5c-1.5 4-2.3 8-2.5 12-4.5 1-8.5 1.5-12.5 2z" fill="#E8503A"/><path d="M4.5 18.5c3.5-.7 6.8-1 10-1.2-2.8 1.2-5.8 1.8-8.6 2.4-.5-.4-1-.8-1.4-1.2z" fill="#F5A623"/></svg>',
+        vscode:
+          '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><path fill="#007ACC" d="M17.6 2.2 9.3 10 4.8 6.4 2.6 7.5v9l2.2 1.1 4.5-3.6 8.3 7.8 3.9-2V4.2l-3.9-2zm.1 5.1v9.4L12 12l5.7-4.7z"/></svg>',
+        python:
+          '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><path fill="#3776AB" d="M12 2c-2.8 0-4.5 1.2-4.5 3v2.5H12v.8H5.2C3.6 8.3 2 9.5 2 12s1.4 3.7 3.2 3.7H7v-2.2c0-1.7 1.5-3 3.2-3h5c1.4 0 2.5-1.1 2.5-2.6V5C17.7 3.2 15 2 12 2zm-2 1.6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/><path fill="#FFD43B" d="M12 22c2.8 0 4.5-1.2 4.5-3v-2.5H12v-.8h6.8c1.6 0 3.2-1.2 3.2-3.7 0-2.5-1.4-3.7-3.2-3.7H17v2.2c0 1.7-1.5 3-3.2 3h-5C7.4 13.5 6.3 14.6 6.3 16v3c0 1.8 2.7 3 5.7 3zm2-1.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>',
+      };
 
-/* Logos simplificados de los tipos de entorno */
-const ICONS = {
-  colab: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><rect width="24" height="24" rx="6" fill="#F9AB00"/><path d="M16.4 15.8a5.2 5.2 0 1 1 0-7.6" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round"/></svg>',
-  vscode: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><path fill="#007ACC" d="M17.6 2.2 9.3 10 4.8 6.4 2.6 7.5v9l2.2 1.1 4.5-3.6 8.3 7.8 3.9-2V4.2l-3.9-2zm.1 5.1v9.4L12 12l5.7-4.7z"/></svg>',
-  python: '<svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle"><path fill="#3776AB" d="M12 2c-2.8 0-4.5 1.2-4.5 3v2.5H12v.8H5.2C3.6 8.3 2 9.5 2 12s1.4 3.7 3.2 3.7H7v-2.2c0-1.7 1.5-3 3.2-3h5c1.4 0 2.5-1.1 2.5-2.6V5C17.7 3.2 15 2 12 2zm-2 1.6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/><path fill="#FFD43B" d="M12 22c2.8 0 4.5-1.2 4.5-3v-2.5H12v-.8h6.8c1.6 0 3.2-1.2 3.2-3.7 0-2.5-1.4-3.7-3.2-3.7H17v2.2c0 1.7-1.5 3-3.2 3h-5C7.4 13.5 6.3 14.6 6.3 16v3c0 1.8 2.7 3 5.7 3zm2-1.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>'
-};
+      function auth() {
+        try {
+          return JSON.parse(localStorage.getItem("k3slab_auth"));
+        } catch (e) {
+          return null;
+        }
+      }
+      function saveAuth(a) {
+        localStorage.setItem("k3slab_auth", JSON.stringify(a));
+      }
+      function logout() {
+        localStorage.removeItem("k3slab_auth");
+        location.reload();
+      }
 
-function auth(){ try { return JSON.parse(localStorage.getItem('k3slab_auth')); } catch(e){ return null; } }
-function saveAuth(a){ localStorage.setItem('k3slab_auth', JSON.stringify(a)); }
-function logout(){ localStorage.removeItem('k3slab_auth'); location.reload(); }
+      async function api(path, opts = {}) {
+        const a = auth();
+        const headers = Object.assign(
+          { "Content-Type": "application/json" },
+          opts.headers || {},
+        );
+        if (a) headers["Authorization"] = "Bearer " + a.token;
+        const o = Object.assign({}, opts, { headers });
+        if (opts.body && typeof opts.body !== "string")
+          o.body = JSON.stringify(opts.body);
+        const r = await fetch(API + path, o);
+        if (r.status === 401) {
+          logout();
+          throw new Error("Sesión expirada");
+        }
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.detail || "Error " + r.status);
+        return data;
+      }
 
-async function api(path, opts={}){
-  const a = auth();
-  const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
-  if (a) headers['Authorization'] = 'Bearer ' + a.token;
-  const r = await fetch(API + path, Object.assign({}, opts, {headers}));
-  if (r.status === 401){ logout(); throw new Error('Sesión expirada'); }
-  const data = await r.json().catch(()=>({}));
-  if (!r.ok) throw new Error(data.detail || ('Error ' + r.status));
-  return data;
-}
+      function toast(msg, ok = true) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.style.borderColor = ok ? "var(--green)" : "var(--red)";
+        t.style.display = "block";
+        setTimeout(() => (t.style.display = "none"), 4000);
+      }
 
-function toast(msg, ok=true){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
-  t.style.display = 'block';
-  setTimeout(()=>t.style.display='none', 4000);
-}
+      function show(v) {
+        document
+          .querySelectorAll(".view")
+          .forEach((e) => e.classList.remove("active"));
+        const view = document.getElementById("v-" + v);
+        view.classList.add("active", "entering");
+        clearTimeout(view._t);
+        view._t = setTimeout(() => view.classList.remove("entering"), 1500);
+        document.getElementById("hdr").style.display =
+          v === "login" ? "none" : "block";
+        document
+          .querySelectorAll("#nav a")
+          .forEach((a) => a.classList.toggle("on", a.dataset.v === v));
+        if (v === "dash") return loadEnvs();
+        if (v === "nuevo") return loadNuevo();
+        if (v === "admin") return loadAdmin();
+        if (v === "servers")
+          return Promise.all([loadServers(), loadActivity()]);
+      }
 
-function show(v){
-  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
-  const view = document.getElementById('v-'+v);
-  view.classList.add('active','entering');
-  clearTimeout(view._t);
-  view._t = setTimeout(()=>view.classList.remove('entering'), 1500);
-  document.getElementById('hdr').style.display = (v === 'login') ? 'none' : 'block';
-  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on', a.dataset.v===v));
-  if (v==='dash') return loadEnvs();
-  if (v==='nuevo') return loadNuevo();
-  if (v==='admin') return loadAdmin();
-  if (v==='servers') return Promise.all([loadServers(), loadActivity()]);
-}
+      /* pantalla de carga: se desvanece cuando los datos iniciales ya están */
+      function hideBoot() {
+        const b = document.getElementById("boot");
+        if (!b || b.classList.contains("off")) return;
+        b.classList.add("off");
+        setTimeout(() => b.remove(), 600);
+      }
+      /* reinicia la animación de entrada de una vista (se usa al quitar el splash) */
+      function reveal(view) {
+        view.classList.remove("active", "entering");
+        void view.offsetWidth;
+        view.classList.add("active", "entering");
+        clearTimeout(view._t);
+        view._t = setTimeout(() => view.classList.remove("entering"), 1500);
+        hideBoot();
+      }
 
-/* pantalla de carga: se desvanece cuando los datos iniciales ya están */
-function hideBoot(){
-  const b = document.getElementById('boot');
-  if (!b || b.classList.contains('off')) return;
-  b.classList.add('off');
-  setTimeout(()=>b.remove(), 600);
-}
-/* reinicia la animación de entrada de una vista (se usa al quitar el splash) */
-function reveal(view){
-  view.classList.remove('active','entering'); void view.offsetWidth;
-  view.classList.add('active','entering');
-  clearTimeout(view._t);
-  view._t = setTimeout(()=>view.classList.remove('entering'), 1500);
-  hideBoot();
-}
+      /* ---------- login ---------- */
+      async function login() {
+        const u = document.getElementById("l-user").value.trim();
+        const p = document.getElementById("l-pass").value;
+        document.getElementById("l-err").textContent = "";
+        try {
+          const r = await fetch(API + "/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: u, password: p }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || "Error");
+          saveAuth(d);
+          enter(d);
+        } catch (e) {
+          document.getElementById("l-err").textContent = e.message;
+        }
+      }
+      document.getElementById("l-pass").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") login();
+      });
 
-/* ---------- login ---------- */
-async function login(){
-  const u = document.getElementById('l-user').value.trim();
-  const p = document.getElementById('l-pass').value;
-  document.getElementById('l-err').textContent = '';
-  try {
-    const r = await fetch(API + '/auth/login', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:u, password:p})});
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Error');
-    saveAuth(d); enter(d);
-  } catch(e){ document.getElementById('l-err').textContent = e.message; }
-}
-document.getElementById('l-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') login(); });
+      async function enter(a) {
+        document.getElementById("hname").textContent = a.username;
+        const rb = document.getElementById("hrole");
+        rb.textContent = a.role === "dev" ? "DEV" : "STUDENT";
+        rb.className = "badge " + a.role;
+        document.getElementById("hctx").textContent =
+          a.role === "dev" ? "DEV" : "ESTUDIANTE";
+        // Dev: links extra en el nav + título con todos los envs; student: solo lo suyo
+        document
+          .querySelectorAll(".nav-dev")
+          .forEach((l) => (l.style.display = a.role === "dev" ? "" : "none"));
+        document
+          .querySelector(".app-header")
+          .classList.toggle("dev", a.role === "dev");
+        if (a.role === "dev") {
+          document.getElementById("dash-title").textContent =
+            "Todos los entornos";
+        } else {
+          document.getElementById("dash-title").textContent = "Mis entornos";
+        }
+        try {
+          await show("dash");
+        } catch (e) {}
+        reveal(document.getElementById("v-dash")); // datos listos → entrada suave
+      }
 
-async function enter(a){
-  document.getElementById('hname').textContent = a.username;
-  const rb = document.getElementById('hrole');
-  rb.textContent = a.role === 'dev' ? 'DEV' : 'STUDENT';
-  rb.className = 'badge ' + a.role;
-  document.getElementById('hctx').textContent = a.role === 'dev' ? 'DEV' : 'ESTUDIANTE';
-  // Dev: links extra en el nav + título con todos los envs; student: solo lo suyo
-  document.querySelectorAll('.nav-dev').forEach(l=>l.style.display = a.role==='dev' ? '' : 'none');
-  document.querySelector('.app-header').classList.toggle('dev', a.role==='dev');
-  if (a.role === 'dev'){
-    document.getElementById('dash-title').textContent = 'Todos los entornos';
-  } else {
-    document.getElementById('dash-title').textContent = 'Mis entornos';
-  }
-  try { await show('dash'); } catch(e){}
-  reveal(document.getElementById('v-dash')); // datos listos → entrada suave
-}
-
-/* ---------- dashboard ---------- */
-async function loadEnvs(){
-  try {
-    const envs = await api('/envs');
-    const el = document.getElementById('env-list');
-    const esDev = (auth()||{}).role === 'dev';
-    if (!envs.length){ el.innerHTML = '<p class="muted">No tienes entornos. Crea uno con "+ Nuevo entorno".</p>'; return; }
-    el.innerHTML = envs.map(e => {
-      // Playground compartido: los estudiantes solo conectan (iniciar si está apagado);
-      // detener/eliminar es de los devs
-      const soloConectar = e.shared && !esDev;
-      return `
+      /* ---------- dashboard ---------- */
+      async function loadEnvs() {
+        try {
+          const envs = await api("/envs");
+          const el = document.getElementById("env-list");
+          const esDev = (auth() || {}).role === "dev";
+          if (!envs.length) {
+            el.innerHTML =
+              '<p class="muted">No tienes entornos. Crea uno con "+ Nuevo entorno".</p>';
+            return;
+          }
+          el.innerHTML = envs
+            .map((e) => {
+              // Playground compartido: los estudiantes solo conectan (iniciar si está apagado);
+              // detener/eliminar es de los devs
+              const soloConectar = e.shared && !esDev;
+              return `
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <b>${e.name}</b>
           <div style="display:flex;gap:6px;align-items:center">
-            ${e.shared?'<span class="badge shared">COMPARTIDO</span>':''}
-            ${e.gpu?'<span class="badge gpu">GPU</span>':''}
+            ${e.shared ? '<span class="badge shared">COMPARTIDO</span>' : ""}
+            ${e.gpu ? '<span class="badge gpu">GPU</span>' : ""}
             <span class="badge ${e.status}">${e.status.toUpperCase()}</span>
           </div>
         </div>
-        <p class="muted" style="margin-top:6px">${e.type} · nodo <b>${e.node}</b> · ${e.shared ? 'compartido · gestionado por los devs' : 'dueño: '+e.owner}</p>
+        <p class="muted" style="margin-top:6px">${e.type} · nodo <b>${e.node}</b> · ${e.shared ? "compartido · gestionado por los devs" : "dueño: " + e.owner}</p>
         <p class="muted">última actividad: ${fmt(e.last_activity)}</p>
         <div class="env-actions">
-          ${e.type==='colab'||e.type==='playground'
-            ? `<button onclick="showConnect(${e.id})">Conectar Colab ↗</button>`
-            : (e.type==='python'
-              ? `<button onclick="showConnect(${e.id})">Conectar consola ↗</button>`
-              : (e.url ? `<a href="${e.url}" target="_blank" onclick="markOpen(${e.id})"><button>Abrir ↗</button></a>` : ''))}
-          ${e.status==='stopped' ? `<button onclick="act(${e.id},'start')">Iniciar</button>` : ''}
-          ${!soloConectar && e.status==='running' ? `<button onclick="act(${e.id},'stop')">Detener</button>` : ''}
-          ${!soloConectar ? `<button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button>` : ''}
+          ${
+            e.type === "colab" || e.type === "playground"
+              ? `<button onclick="showConnect(${e.id})">Conectar Colab ↗</button>`
+              : e.type === "python"
+                ? `<button onclick="showConnect(${e.id})">Conectar consola ↗</button>`
+                : e.url
+                  ? `<a href="${e.url}" target="_blank" onclick="markOpen(${e.id})"><button>Abrir ↗</button></a>`
+                  : ""
+          }
+          ${e.status === "stopped" ? `<button onclick="act(${e.id},'start')">Iniciar</button>` : ""}
+          ${!soloConectar && e.status === "running" ? `<button onclick="act(${e.id},'stop')">Detener</button>` : ""}
+          ${!soloConectar ? `<button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button>` : ""}
         </div>
-        ${e.type==='vscode' ? `<div class="muted" style="font-size:11px;margin-top:6px">password del IDE: <b>${e.password||'k3slab'}</b>${e.password?'':' (default)'}</div>` : ''}
-        ${e.type==='matlab' ? `<div class="muted" style="font-size:11px;margin-top:6px">password VNC: <b>${e.password||'k3slab'}</b>${e.password?'':' (default)'} · acceso directo por NodePort (igual que VS Code) · escritorio tarda ~1 min en arrancar</div>` : ''}
-        ${e.shared && !esDev ? `<div class="muted" style="font-size:11px;margin-top:6px">Playground compartido: úsalo con cuidado — detener/eliminar es de los devs</div>` : ''}
-      </div>`; }).join('');
-  } catch(e){ toast(e.message, false); }
-}
-function fmt(s){ if(!s) return '—'; const d = new Date(s+'Z'); return d.toLocaleString(); }
-async function markOpen(id){ try{ await api('/envs/'+id+'/activity', {method:'POST'}); }catch(e){} }
-
-/* Conectar Colab (flujo real: Connect to a local runtime) */
-async function showConnect(id){
-  try {
-    const c = await api('/envs/'+id+'/connect');
-    document.getElementById('c-ssh').textContent = c.ssh_cmd;
-    const urlRow = document.getElementById('c-url-row');
-    const urlCopy = document.getElementById('c-url-copy');
-    const execRow = document.getElementById('c-exec-row');
-    const passRow = document.getElementById('c-pass-row');
-    const tokenRow = document.getElementById('c-token-row');
-    const tokenLbl = document.getElementById('c-token-label');
-    const passLbl = document.getElementById('c-pass-label');
-    const note = document.getElementById('c-note');
-    const sshCopy = document.getElementById('c-ssh-copy');
-    const title = document.getElementById('c-tipo-title');
-    passRow.style.display = 'none'; passLbl.style.display = 'none';
-    tokenRow.style.display = 'none'; tokenLbl.style.display = 'none';
-    urlRow.style.display = 'none'; urlCopy.style.display = 'none';
-    execRow.style.display = 'none'; sshCopy.style.display = 'none';
-    if (c.tipo === 'console') {
-      title.textContent = 'Python · consola (kubectl exec)';
-      execRow.style.display = 'flex';
-      document.getElementById('c-exec').textContent = c.exec_cmd;
-      note.textContent = '';
-    } else if (c.tipo === 'matlab') {
-      title.textContent = 'MATLAB · noVNC';
-      sshCopy.style.display = 'flex';
-      document.getElementById('c-ssh').textContent = c.ssh_cmd;
-      urlRow.style.display = 'block'; urlCopy.style.display = 'flex';
-      urlRow.textContent = 'URL directa (NodePort, funciona desde la red del lab — igual que VS Code):';
-      document.getElementById('c-url').textContent = c.node_url;
-      passLbl.style.display = 'block'; passRow.style.display = 'flex';
-      passLbl.textContent = 'Password del escritorio VNC (noVNC lo pide al entrar):';
-      document.getElementById('c-pass').textContent = c.password;
-      note.textContent = 'Fuera de la red del lab usa el port-forward: lanza el comando SSH de arriba, deja la ventana abierta y abre '+c.local_url+'. El escritorio tarda ~1 min en arrancar la primera vez.';
-    } else {
-      title.textContent = c.shared ? 'Playground · Colab (compartido)' : 'Colab · Connect to a local runtime';
-      sshCopy.style.display = 'flex';
-      urlRow.style.display = 'block'; urlCopy.style.display = 'flex';
-      urlRow.textContent = 'URL + token para pegar en Colab (botón Connect → Connect to local runtime):';
-      document.getElementById('c-url').textContent = c.colab_url || '(el token aún no aparece — espera a que el pod termine de arrancar y reintenta)';
-      if (c.token){
-        tokenLbl.style.display = 'block'; tokenRow.style.display = 'flex';
-        document.getElementById('c-token').textContent = c.token;
+        ${e.type === "vscode" ? `<div class="muted" style="font-size:11px;margin-top:6px">password del IDE: <b>${e.password || "k3slab"}</b>${e.password ? "" : " (default)"}</div>` : ""}
+        ${e.type === "matlab" ? `<div class="muted" style="font-size:11px;margin-top:6px">password VNC: <b>${e.password || "k3slab"}</b>${e.password ? "" : " (default)"} · acceso directo por NodePort (igual que VS Code) · escritorio tarda ~1 min en arrancar</div>` : ""}
+        ${e.shared && !esDev ? `<div class="muted" style="font-size:11px;margin-top:6px">Playground compartido: úsalo con cuidado — detener/eliminar es de los devs</div>` : ""}
+      </div>`;
+            })
+            .join("");
+        } catch (e) {
+          toast(e.message, false);
+        }
       }
-      note.textContent = c.node_url
-        ? 'Nota: la URL directa '+c.node_url+' solo sirve dentro del nodo; Colab exige localhost (mixed content). Usa el túnel SSH.'
-        : '';
-    }
-    document.getElementById('c-steps').innerHTML = c.steps.map(s => '<li style="margin:4px 0">'+s.replace(/</g,'&lt;')+'</li>').join('');
-    document.getElementById('connect-modal').style.display = 'flex';
-  } catch(e){ toast(e.message, false); }
-}
-function closeConnect(){ document.getElementById('connect-modal').style.display = 'none'; }
-function copyText(id){
-  const t = document.getElementById(id).textContent;
-  navigator.clipboard.writeText(t).then(() => toast('Copiado ✓', true));
-}
-async function act(id, action){
-  try { await api('/envs/'+id+'/'+action, {method:'POST'}); toast('Entorno '+(action==='start'?'iniciado':'detenido')+' ✓'); loadEnvs(); if(document.getElementById('v-admin').classList.contains('active')) loadAdmin(); }
-  catch(e){ toast(e.message, false); }
-}
-async function del(id, name){
-  if (!confirm('¿Eliminar '+name+'? Se borran el pod y sus datos del nodo.')) return;
-  try { await api('/envs/'+id, {method:'DELETE'}); toast('Entorno eliminado ✓'); loadEnvs(); if(document.getElementById('v-admin').classList.contains('active')) loadAdmin(); }
-  catch(e){ toast(e.message, false); }
-}
+      function fmt(s) {
+        if (!s) return "—";
+        const d = new Date(s + "Z");
+        return d.toLocaleString();
+      }
+      async function markOpen(id) {
+        try {
+          await api("/envs/" + id + "/activity", { method: "POST" });
+        } catch (e) {}
+      }
 
-/* ---------- nuevo entorno ---------- */
-async function loadNuevo(){
-  selType = selNode = null; selGpu = false; document.getElementById('btn-launch').disabled = true;
-  const [cats, nodes] = await Promise.all([api('/catalog'), api('/nodes')]);
-  lastNodes = nodes;
-  document.getElementById('opt-gpu').checked = false; updateGpuSelect();
-  document.getElementById('gpu-select-wrap').innerHTML = '';
-  document.getElementById('opt-select-host').checked = false;
-  document.getElementById('host-section').style.display = 'none';
-  document.getElementById('opt-pass').value = '';
-  document.getElementById('res-pass').style.display = '';
-  const tl = document.getElementById('type-list');
-  const esDev = (auth()||{}).role === 'dev';
-  tl.innerHTML = cats.filter(c => c.id !== 'playground' || esDev).map(c => `
+      /* Conectar Colab (flujo real: Connect to a local runtime) */
+      async function showConnect(id) {
+        try {
+          const c = await api("/envs/" + id + "/connect");
+          document.getElementById("c-ssh").textContent = c.ssh_cmd;
+          const urlRow = document.getElementById("c-url-row");
+          const urlCopy = document.getElementById("c-url-copy");
+          const execRow = document.getElementById("c-exec-row");
+          const passRow = document.getElementById("c-pass-row");
+          const tokenRow = document.getElementById("c-token-row");
+          const tokenLbl = document.getElementById("c-token-label");
+          const passLbl = document.getElementById("c-pass-label");
+          const note = document.getElementById("c-note");
+          const sshCopy = document.getElementById("c-ssh-copy");
+          const title = document.getElementById("c-tipo-title");
+          passRow.style.display = "none";
+          passLbl.style.display = "none";
+          tokenRow.style.display = "none";
+          tokenLbl.style.display = "none";
+          urlRow.style.display = "none";
+          urlCopy.style.display = "none";
+          execRow.style.display = "none";
+          sshCopy.style.display = "none";
+          if (c.tipo === "console") {
+            title.textContent = "Python · consola (kubectl exec)";
+            execRow.style.display = "flex";
+            document.getElementById("c-exec").textContent = c.exec_cmd;
+            note.textContent = "";
+          } else if (c.tipo === "matlab") {
+            title.textContent = "MATLAB · noVNC";
+            sshCopy.style.display = "flex";
+            document.getElementById("c-ssh").textContent = c.ssh_cmd;
+            urlRow.style.display = "block";
+            urlCopy.style.display = "flex";
+            urlRow.textContent =
+              "URL directa (NodePort, funciona desde la red del lab — igual que VS Code):";
+            document.getElementById("c-url").textContent = c.node_url;
+            passLbl.style.display = "block";
+            passRow.style.display = "flex";
+            passLbl.textContent =
+              "Password del escritorio VNC (noVNC lo pide al entrar):";
+            document.getElementById("c-pass").textContent = c.password;
+            note.textContent =
+              "Fuera de la red del lab usa el port-forward: lanza el comando SSH de arriba, deja la ventana abierta y abre " +
+              c.local_url +
+              ". El escritorio tarda ~1 min en arrancar la primera vez.";
+          } else {
+            title.textContent = c.shared
+              ? "Playground · Colab (compartido)"
+              : "Colab · Connect to a local runtime";
+            sshCopy.style.display = "flex";
+            urlRow.style.display = "block";
+            urlCopy.style.display = "flex";
+            urlRow.textContent =
+              "URL + token para pegar en Colab (botón Connect → Connect to local runtime):";
+            document.getElementById("c-url").textContent =
+              c.colab_url ||
+              "(el token aún no aparece — espera a que el pod termine de arrancar y reintenta)";
+            if (c.token) {
+              tokenLbl.style.display = "block";
+              tokenRow.style.display = "flex";
+              document.getElementById("c-token").textContent = c.token;
+            }
+            note.textContent = c.node_url
+              ? "Nota: la URL directa " +
+                c.node_url +
+                " solo sirve dentro del nodo; Colab exige localhost (mixed content). Usa el túnel SSH."
+              : "";
+          }
+          document.getElementById("c-steps").innerHTML = c.steps
+            .map(
+              (s) =>
+                '<li style="margin:4px 0">' + s.replace(/</g, "&lt;") + "</li>",
+            )
+            .join("");
+          document.getElementById("connect-modal").style.display = "flex";
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
+      function closeConnect() {
+        document.getElementById("connect-modal").style.display = "none";
+      }
+      function copyText(id) {
+        const t = document.getElementById(id).textContent;
+        navigator.clipboard.writeText(t).then(() => toast("Copiado ✓", true));
+      }
+      async function act(id, action) {
+        try {
+          await api("/envs/" + id + "/" + action, { method: "POST" });
+          toast(
+            "Entorno " + (action === "start" ? "iniciado" : "detenido") + " ✓",
+          );
+          loadEnvs();
+          if (document.getElementById("v-admin").classList.contains("active"))
+            loadAdmin();
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
+      async function del(id, name) {
+        if (
+          !confirm(
+            "¿Eliminar " + name + "? Se borran el pod y sus datos del nodo.",
+          )
+        )
+          return;
+        try {
+          await api("/envs/" + id, { method: "DELETE" });
+          toast("Entorno eliminado ✓");
+          loadEnvs();
+          if (document.getElementById("v-admin").classList.contains("active"))
+            loadAdmin();
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
+
+      /* ---------- nuevo entorno ---------- */
+      async function loadNuevo() {
+        selType = selNode = null;
+        selGpu = false;
+        document.getElementById("btn-launch").disabled = true;
+        const [cats, nodes] = await Promise.all([
+          api("/catalog"),
+          api("/nodes"),
+        ]);
+        lastNodes = nodes;
+        document.getElementById("opt-gpu").checked = false;
+        updateGpuSelect();
+        document.getElementById("gpu-select-wrap").innerHTML = "";
+        document.getElementById("opt-select-host").checked = false;
+        document.getElementById("host-section").style.display = "none";
+        document.getElementById("opt-pass").value = "";
+        document.getElementById("res-pass").style.display = "";
+        const tl = document.getElementById("type-list");
+        const esDev = (auth() || {}).role === "dev";
+        tl.innerHTML = cats
+          .filter((c) => c.id !== "playground" || esDev)
+          .map(
+            (c) => `
     <div class="type-card" onclick="pickType('${c.id}', this)">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        ${ICONS[c.id]||ICONS.colab||''}<b>${c.name}</b>${c.id==='playground'?'<span class="badge dev">DEV</span>':''}</div>
+        ${ICONS[c.id] || ICONS.colab || ""}<b>${c.name}</b>${c.id === "playground" ? '<span class="badge dev">DEV</span>' : ""}</div>
       <p class="muted" style="margin-top:6px">${c.description}</p>
-      <p class="muted">CPU ${c.cpu} · RAM ${c.mem}${c.ports.length? ' · puerto '+c.ports[0]:''} · acceso ${c.access}</p>
-    </div>`).join('');
-  const nl = document.getElementById('node-list');
-  nl.innerHTML = nodes.map(n => {
-    const cpuPct = Math.min(100, Math.round(n.cpu_used / (parseCores(n.cpu_total)*1000) * 100)) || 0;
-    const memPct = Math.min(100, Math.round(n.mem_used / parseMem(n.mem_total) * 100)) || 0;
-    const cls = p => p>=90 ? 'full' : (p>=60 ? 'warn' : '');
-    return `
+      <p class="muted">CPU ${c.cpu} · RAM ${c.mem}${c.ports.length ? " · puerto " + c.ports[0] : ""} · acceso ${c.access}</p>
+    </div>`,
+          )
+          .join("");
+        const nl = document.getElementById("node-list");
+        nl.innerHTML = nodes
+          .map((n) => {
+            const cpuPct =
+              Math.min(
+                100,
+                Math.round(
+                  (n.cpu_used / (parseCores(n.cpu_total) * 1000)) * 100,
+                ),
+              ) || 0;
+            const memPct =
+              Math.min(
+                100,
+                Math.round((n.mem_used / parseMem(n.mem_total)) * 100),
+              ) || 0;
+            const cls = (p) => (p >= 90 ? "full" : p >= 60 ? "warn" : "");
+            return `
     <div class="node-card" onclick="pickNode('${n.name}', this)">
       <div style="display:flex;justify-content:space-between"><b>${n.name}</b>
-        <span class="muted">${n.tier||''} ${n.status==='Ready'?'':'· ⚠️ '+n.status}</span></div>
-      <p class="muted">${n.gpu_model ? 'GPU '+n.gpu_model+' ('+n.vram_gb+') · '+n.gpu_count+' GPU(s)' : 'sin GPU'} · ${n.envs_activos} entornos activos</p>
+        <span class="muted">${n.tier || ""} ${n.status === "Ready" ? "" : "· ⚠️ " + n.status}</span></div>
+      <p class="muted">${n.gpu_model ? "GPU " + n.gpu_model + " (" + n.vram_gb + ") · " + n.gpu_count + " GPU(s)" : "sin GPU"} · ${n.envs_activos} entornos activos</p>
       <p class="muted">CPU ${n.cpu_used}m / ${n.cpu_total} cores</p>
       <div class="bar"><i class="${cls(cpuPct)}" style="width:${cpuPct}%"></i></div>
       <p class="muted">RAM ${n.mem_used} Mi / ${n.mem_total}</p>
       <div class="bar"><i class="${cls(memPct)}" style="width:${memPct}%"></i></div>
-    </div>`;}).join('');
-}
-function parseCores(v){ return parseFloat(v) || 32; }
-function parseMem(v){ if(!v) return 45000; if(v.endsWith('Ki')) return Math.round(parseInt(v)/1024); if(v.endsWith('Mi')) return parseInt(v); if(v.endsWith('Gi')) return Math.round(parseFloat(v)*1024); return parseInt(v)||45000; }
-function pickType(id, el){ selType = id; document.querySelectorAll('.type-card').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); checkLaunch(); updateRecursos(); }
-function pickNode(name, el){ selNode = name; document.querySelectorAll('.node-card').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); checkLaunch(); }
-function selectHostChecked(){ return document.getElementById('opt-select-host').checked; }
-function toggleHostSection(){
-  const on = selectHostChecked();
-  document.getElementById('host-section').style.display = on ? 'block' : 'none';
-  if (!on){ selNode = null; document.querySelectorAll('.node-card').forEach(c=>c.classList.remove('sel')); }
-  checkLaunch();
-}
-function checkLaunch(){ document.getElementById('btn-launch').disabled = !(selType && (!selectHostChecked() || selNode)); }
+    </div>`;
+          })
+          .join("");
+      }
+      function parseCores(v) {
+        return parseFloat(v) || 32;
+      }
+      function parseMem(v) {
+        if (!v) return 45000;
+        if (v.endsWith("Ki")) return Math.round(parseInt(v) / 1024);
+        if (v.endsWith("Mi")) return parseInt(v);
+        if (v.endsWith("Gi")) return Math.round(parseFloat(v) * 1024);
+        return parseInt(v) || 45000;
+      }
+      function pickType(id, el) {
+        selType = id;
+        document
+          .querySelectorAll(".type-card")
+          .forEach((c) => c.classList.remove("sel"));
+        el.classList.add("sel");
+        checkLaunch();
+        updateRecursos();
+      }
+      function pickNode(name, el) {
+        selNode = name;
+        document
+          .querySelectorAll(".node-card")
+          .forEach((c) => c.classList.remove("sel"));
+        el.classList.add("sel");
+        checkLaunch();
+      }
+      function selectHostChecked() {
+        return document.getElementById("opt-select-host").checked;
+      }
+      function toggleHostSection() {
+        const on = selectHostChecked();
+        document.getElementById("host-section").style.display = on
+          ? "block"
+          : "none";
+        if (!on) {
+          selNode = null;
+          document
+            .querySelectorAll(".node-card")
+            .forEach((c) => c.classList.remove("sel"));
+        }
+        checkLaunch();
+      }
+      function checkLaunch() {
+        document.getElementById("btn-launch").disabled = !(
+          selType &&
+          (!selectHostChecked() || selNode)
+        );
+      }
 
-/* Recursos (GPU opcional + montar /home + host dedicado + contraseña configurable) */
-function renderGpuChips(n, preserve){
-  const wrap = document.getElementById('gpu-select-wrap');
-  if(!wrap) return;
-  n = Math.max(0, n|0);
-  const cur = preserve == null ? '' : String(preserve);
-  let html = `<button type="button" class="chip${cur===''?' on':''}" data-v="" onclick="pickGpuChip(this,event)">Todas</button>`;
-  for(let i=0;i<n;i++) html += `<button type="button" class="chip${cur===String(i)?' on':''}" data-v="${i}" onclick="pickGpuChip(this,event)">GPU ${i}</button>`;
-  wrap.innerHTML = html;
-}
-function pickGpuChip(el, ev){
-  ev.preventDefault(); ev.stopPropagation(); // que el click del chip no re-togglee el card
-  el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
-}
-function gpuIndexSel(){
-  const on = document.querySelector('#gpu-select-wrap .chip.on');
-  return on ? on.dataset.v : '';
-}
-function updateRecursos(){
-  const card = document.getElementById('recursos-card');
-  const recursoTypes = ['colab','python','vscode','matlab','playground'];
-  if (!selType || !recursoTypes.includes(selType)) { card.style.display='none'; return; }
-  card.style.display='block';
-  const esPg = selType === 'playground';
-  // El playground es compartido: nunca monta home y no usa contraseña
-  document.getElementById('res-home').style.display = esPg ? 'none' : '';
-  // Contraseña configurable para vscode/matlab (vacío = default k3slab)
-  const showPass = (selType === 'vscode' || selType === 'matlab');
-  document.getElementById('res-pass').style.display = showPass ? '' : 'none';
-  if (!showPass) document.getElementById('opt-pass').value = '';
-  // Con host automático usamos el máximo de GPUs entre los nodos Ready
-  const node = (lastNodes||[]).find(x=>x.name===selNode);
-  const n = node?.gpu_count ?? Math.max(0, ...(lastNodes||[]).filter(x=>x.status==='Ready').map(x=>x.gpu_count||0));
-  renderGpuChips(n, gpuIndexSel());
-  // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario; playground nunca
-  document.getElementById('opt-home').checked = (selType !== 'python' && !esPg);
-}
-function updateGpuSelect(){
-  selGpu = document.getElementById('opt-gpu').checked;
-  const wrap = document.getElementById('gpu-select-wrap');
-  wrap.style.display = selGpu ? 'flex' : 'none';
-  if (!selGpu){ // al apagar GPU, resetea la selección a "Todas"
-    const chips = wrap.querySelectorAll('.chip');
-    chips.forEach(c=>c.classList.remove('on'));
-    if (chips[0]) chips[0].classList.add('on');
-  }
-}
-async function launch(){
-  try {
-    const body = {catalog_id: selType,
-                  mount_home: selType==='playground' ? false : document.getElementById('opt-home').checked};
-    if (selectHostChecked()) body.node_name = selNode; // si no: k3s asigna por balanceo
-    const pw = (document.getElementById('opt-pass').value || '').trim();
-    if (pw) body.password = pw;
-    if (document.getElementById('opt-gpu').checked) {
-      body.gpu = true;
-      const v = gpuIndexSel();
-      body.gpu_index = v === '' ? null : parseInt(v);
-    }
-    const env = await api('/envs', {method:'POST', body: JSON.stringify(body)});
-    toast('Entorno creado: ' + env.name + ' ✓'); show('dash');
-  } catch(e){ toast(e.message, false); }
-}
+      /* Recursos (GPU opcional + montar /home + host dedicado + contraseña configurable) */
+      function renderGpuChips(n, preserve) {
+        const wrap = document.getElementById("gpu-select-wrap");
+        if (!wrap) return;
+        n = Math.max(0, n | 0);
+        const cur = preserve == null ? "" : String(preserve);
+        let html = `<button type="button" class="chip${cur === "" ? " on" : ""}" data-v="" onclick="pickGpuChip(this,event)">Todas</button>`;
+        for (let i = 0; i < n; i++)
+          html += `<button type="button" class="chip${cur === String(i) ? " on" : ""}" data-v="${i}" onclick="pickGpuChip(this,event)">GPU ${i}</button>`;
+        wrap.innerHTML = html;
+      }
+      function pickGpuChip(el, ev) {
+        ev.preventDefault();
+        ev.stopPropagation(); // que el click del chip no re-togglee el card
+        el.parentElement
+          .querySelectorAll(".chip")
+          .forEach((c) => c.classList.remove("on"));
+        el.classList.add("on");
+      }
+      function gpuIndexSel() {
+        const on = document.querySelector("#gpu-select-wrap .chip.on");
+        return on ? on.dataset.v : "";
+      }
+      function updateRecursos() {
+        const card = document.getElementById("recursos-card");
+        const recursoTypes = [
+          "colab",
+          "python",
+          "vscode",
+          "matlab",
+          "playground",
+        ];
+        if (!selType || !recursoTypes.includes(selType)) {
+          card.style.display = "none";
+          return;
+        }
+        card.style.display = "block";
+        const esPg = selType === "playground";
+        // El playground es compartido: nunca monta home y no usa contraseña
+        document.getElementById("res-home").style.display = esPg ? "none" : "";
+        // Contraseña configurable para vscode/matlab (vacío = default k3slab)
+        const showPass = selType === "vscode" || selType === "matlab";
+        document.getElementById("res-pass").style.display = showPass
+          ? ""
+          : "none";
+        if (!showPass) document.getElementById("opt-pass").value = "";
+        // Con host automático usamos el máximo de GPUs entre los nodos Ready
+        const node = (lastNodes || []).find((x) => x.name === selNode);
+        const n =
+          node?.gpu_count ??
+          Math.max(
+            0,
+            ...(lastNodes || [])
+              .filter((x) => x.status === "Ready")
+              .map((x) => x.gpu_count || 0),
+          );
+        renderGpuChips(n, gpuIndexSel());
+        // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario; playground nunca
+        document.getElementById("opt-home").checked =
+          selType !== "python" && !esPg;
+      }
+      function updateGpuSelect() {
+        selGpu = document.getElementById("opt-gpu").checked;
+        const wrap = document.getElementById("gpu-select-wrap");
+        wrap.style.display = selGpu ? "flex" : "none";
+        if (!selGpu) {
+          // al apagar GPU, resetea la selección a "Todas"
+          const chips = wrap.querySelectorAll(".chip");
+          chips.forEach((c) => c.classList.remove("on"));
+          if (chips[0]) chips[0].classList.add("on");
+        }
+      }
+      async function launch() {
+        try {
+          const body = {
+            catalog_id: selType,
+            mount_home:
+              selType === "playground"
+                ? false
+                : document.getElementById("opt-home").checked,
+          };
+          if (selectHostChecked()) body.node_name = selNode; // si no: k3s asigna por balanceo
+          const pw = (document.getElementById("opt-pass").value || "").trim();
+          if (pw) body.password = pw;
+          if (document.getElementById("opt-gpu").checked) {
+            body.gpu = true;
+            const v = gpuIndexSel();
+            body.gpu_index = v === "" ? null : parseInt(v);
+          }
+          const env = await api("/envs", {
+            method: "POST",
+            body: JSON.stringify(body),
+          });
+          toast("Entorno creado: " + env.name + " ✓");
+          show("dash");
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
 
-/* ---------- admin ---------- */
-/* Panel DEV con búsqueda y filtros (usuario / nodo / tipo / estado) */
-let _admData = null;
-async function loadAdmin(){
-  try {
-    _admData = await api('/admin/overview');
-    renderAdmin();
-  } catch(e){ toast(e.message, false); }
-}
-function renderAdmin(){
-  if (!_admData) return;
-  const o = _admData;
-  const q = (document.getElementById('adm-q').value||'').toLowerCase().trim();
-  const fu = document.getElementById('adm-user').value;
-  const fn = document.getElementById('adm-node').value;
-  const ft = document.getElementById('adm-type').value;
-  const fs = document.getElementById('adm-status').value;
-  _fillSel('adm-user', o.envs.map(e=>e.owner), 'Usuario: todos');
-  _fillSel('adm-node', o.envs.map(e=>e.node||'—'), 'Nodo: todos');
-  _fillSel('adm-type', o.envs.map(e=>e.type), 'Tipo: todos');
-  _fillSel('adm-status', ['running','stopped'], 'Estado: todas');
-  const match = txt => !q || txt.toLowerCase().includes(q);
-  const envs = o.envs.filter(e => (!fu||e.owner===fu) && (!fn||e.node===fn) &&
-    (!ft||e.type===ft) && (!fs||e.status===fs) &&
-    match(e.owner+' '+e.name+' '+(e.node||'')+' '+e.type));
-  document.getElementById('admin-summary').textContent =
-    `Total: ${o.total_envs} · RUNNING: ${o.por_estado.running||0} · STOPPED: ${o.por_estado.stopped||0}` +
-    (envs.length !== o.envs.length ? ` · mostrando ${envs.length}` : '');
-  const rows = envs.map(e => `<tr>
+      /* ---------- admin ---------- */
+      /* Panel DEV con búsqueda y filtros (usuario / nodo / tipo / estado) */
+      let _admData = null;
+      async function loadAdmin() {
+        try {
+          _admData = await api("/admin/overview");
+          renderAdmin();
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
+      function renderAdmin() {
+        if (!_admData) return;
+        const o = _admData;
+        const q = (document.getElementById("adm-q").value || "")
+          .toLowerCase()
+          .trim();
+        const fu = document.getElementById("adm-user").value;
+        const fn = document.getElementById("adm-node").value;
+        const ft = document.getElementById("adm-type").value;
+        const fs = document.getElementById("adm-status").value;
+        _fillSel(
+          "adm-user",
+          o.envs.map((e) => e.owner),
+          "Usuario: todos",
+        );
+        _fillSel(
+          "adm-node",
+          o.envs.map((e) => e.node || "—"),
+          "Nodo: todos",
+        );
+        _fillSel(
+          "adm-type",
+          o.envs.map((e) => e.type),
+          "Tipo: todos",
+        );
+        _fillSel("adm-status", ["running", "stopped"], "Estado: todas");
+        const match = (txt) => !q || txt.toLowerCase().includes(q);
+        const envs = o.envs.filter(
+          (e) =>
+            (!fu || e.owner === fu) &&
+            (!fn || e.node === fn) &&
+            (!ft || e.type === ft) &&
+            (!fs || e.status === fs) &&
+            match(e.owner + " " + e.name + " " + (e.node || "") + " " + e.type),
+        );
+        document.getElementById("admin-summary").textContent =
+          `Total: ${o.total_envs} · RUNNING: ${o.por_estado.running || 0} · STOPPED: ${o.por_estado.stopped || 0}` +
+          (envs.length !== o.envs.length ? ` · mostrando ${envs.length}` : "");
+        const rows = envs
+          .map(
+            (e) => `<tr>
       <td>${e.owner}</td><td>${e.name}</td><td>${e.type}</td><td>${e.node}</td>
       <td><span class="badge ${e.status}">${e.status.toUpperCase()}</span></td>
-      <td>${(e.type==='vscode'||e.type==='matlab') ? (e.password ? `<b>${e.password}</b>${e.password==='k3slab'?' <span class="muted">(default)</span>':''}` : '<span class="muted">k3slab (default)</span>') : '—'}</td>
-      <td>${e.nodeport||'—'}</td><td>${fmt(e.last_activity)}</td>
-      <td>${(e.type==='colab'||e.type==='playground')?'(colab)':(e.url?`<a href="${e.url}" target="_blank">abrir ↗</a>`:'—')}</td>
-      <td>${e.status==='running'?`<button onclick="act(${e.id},'stop')">Detener</button> `:''}
-          <button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button></td></tr>`).join('');
-  document.getElementById('admin-table').innerHTML =
-    '<tr><th>Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>Password</th><th>NodePort</th><th>Últ. actividad</th><th>URL</th><th>Acciones</th></tr>' + rows;
-}
-async function runLifecycle(){
-  try {
-    const r = await api('/admin/lifecycle/run', {method:'POST'});
-    toast(`Ciclo de vida: ${r.detenidos.length} detenidos, ${r.eliminados.length} eliminados`);
-    loadAdmin();
-  } catch(e){ toast(e.message, false); }
-}
+      <td>${e.type === "vscode" || e.type === "matlab" ? (e.password ? `<b>${e.password}</b>${e.password === "k3slab" ? ' <span class="muted">(default)</span>' : ""}` : '<span class="muted">k3slab (default)</span>') : "—"}</td>
+      <td>${e.nodeport || "—"}</td><td>${fmt(e.last_activity)}</td>
+      <td>${e.type === "colab" || e.type === "playground" ? "(colab)" : e.url ? `<a href="${e.url}" target="_blank">abrir ↗</a>` : "—"}</td>
+      <td>${e.status === "running" ? `<button onclick="act(${e.id},'stop')">Detener</button> ` : ""}
+          <button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button></td></tr>`,
+          )
+          .join("");
+        document.getElementById("admin-table").innerHTML =
+          "<tr><th>Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>Password</th><th>NodePort</th><th>Últ. actividad</th><th>URL</th><th>Acciones</th></tr>" +
+          rows;
+      }
+      async function runLifecycle() {
+        try {
+          const r = await api("/admin/lifecycle/run", { method: "POST" });
+          toast(
+            `Ciclo de vida: ${r.detenidos.length} detenidos, ${r.eliminados.length} eliminados`,
+          );
+          loadAdmin();
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
 
-/* ---------- equipos (dev) ---------- */
-function _gb(b){ return (b/1073741824).toFixed(1).replace(/\.0$/,''); }
-function _bar(pct){
-  const p = Math.max(0, Math.min(100, pct||0));
-  const c = p>80 ? 'var(--red)' : p>60 ? 'var(--yellow)' : 'var(--green)';
-  return `<div style="background:var(--bg);border-radius:4px;height:8px;overflow:hidden;margin-top:4px"><div style="width:${p}%;height:100%;background:${c}"></div></div>`;
-}
-/* Panel dev: actividad con búsqueda y filtros (usuario / nodo / tipo / estado) */
-let _actData = {sesiones:[], entornos:[]};
-async function loadActivity(){
-  try {
-    _actData = await api('/admin/activity');
-    renderActivity();
-  } catch (err) {
-    document.getElementById('activity-body').innerHTML = '<span class="muted">Sin datos: '+err.message+'</span>';
-  }
-}
-function _fillSel(id, values, label){
-  const sel = document.getElementById(id);
-  const cur = sel.value;
-  sel.innerHTML = `<option value="">${label}</option>` +
-    [...new Set(values)].sort().map(v=>`<option${v===cur?' selected':''}>${v}</option>`).join('');
-}
-function renderActivity(){
-  const el = document.getElementById('activity-body');
-  const q = (document.getElementById('act-q').value||'').toLowerCase().trim();
-  const fu = document.getElementById('act-user').value;
-  const fn = document.getElementById('act-node').value;
-  const ft = document.getElementById('act-type').value;
-  const fs = document.getElementById('act-status').value;
-  _fillSel('act-user', [..._actData.sesiones.map(s=>s.user), ..._actData.entornos.map(e=>e.owner)], 'Usuario: todos');
-  _fillSel('act-node', [..._actData.sesiones.map(s=>s.node), ..._actData.entornos.map(e=>e.node||'—')], 'Nodo: todos');
-  _fillSel('act-type', _actData.entornos.map(e=>e.type), 'Tipo: todos');
-  _fillSel('act-status', ['running','creating','stopped'], 'Estado: todos');
-  const match = txt => !q || txt.toLowerCase().includes(q);
-  const sesiones = _actData.sesiones.filter(s => (!fu||s.user===fu) && (!fn||s.node===fn) &&
-    match(s.user+' '+s.node+' '+s.tty));
-  const entornos = _actData.entornos.filter(e => (!fu||e.owner===fu) && (!fn||e.node===fn) &&
-    (!ft||e.type===ft) && (!fs||e.status===fs) &&
-    match(e.owner+' '+e.name+' '+(e.node||'')+' '+e.type));
-  let html = '';
-  // Conexiones (sesiones SSH en los nodos)
-  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Conexiones activas</b><span class="muted" style="font-size:12px">${sesiones.length} sesión(es)</span></div>`;
-  html += !sesiones.length ? '<div class="muted">Sin conexiones con estos filtros.</div>' :
-    '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">' +
-    '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Usuario</th><th>Nodo</th><th>TTY</th><th>Desde</th><th>Login</th><th>Idle</th></tr>' +
-    sesiones.map(s => `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${s.user}</b></td><td>${s.node}</td><td>${s.tty}</td><td>${s.desde}</td><td>${s.login}</td><td>${s.idle||'—'}</td></tr>`).join('') +
-    '</table>';
-  // Entornos (estado real del clúster)
-  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Entornos</b><span class="muted" style="font-size:12px">${entornos.length} entorno(s)</span></div>`;
-  html += !entornos.length ? '<div class="muted">Sin entornos con estos filtros.</div>' :
-    '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
-    '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>GPU</th></tr>' +
-    entornos.map(e => `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${e.owner}</b></td><td>${e.name}</td><td>${e.type}</td><td>${e.node||'—'}</td><td><span class="badge ${e.status}">${e.status}</span></td><td>${e.gpu?'✓':''}</td></tr>`).join('') +
-    '</table>';
-  el.innerHTML = html;
-  el.classList.remove('muted');
-}
-async function loadServers(){
-  try {
-    const d = await api('/admin/servers');
-    document.getElementById('grafana-link').href = d.grafana_url;
-    document.getElementById('servers-grid').innerHTML = d.servers.map(s => {
-      const ramPct = (s.ram_used!=null && s.ram_total) ? s.ram_used/s.ram_total*100 : null;
-      const diskPct = (s.disk_total && s.disk_free!=null) ? (s.disk_total-s.disk_free)/s.disk_total*100 : null;
-      const nGpu = (s.gpus||[]).length;
-      const gpuRows = nGpu ? s.gpus.map(gpu => {
-        const vp = gpu.vram_total ? gpu.vram_used/gpu.vram_total*100 : null;
-        return `<div style="margin-top:8px">
+      /* ---------- equipos (dev) ---------- */
+      function _gb(b) {
+        return (b / 1073741824).toFixed(1).replace(/\.0$/, "");
+      }
+      function _bar(pct) {
+        const p = Math.max(0, Math.min(100, pct || 0));
+        const c =
+          p > 80 ? "var(--red)" : p > 60 ? "var(--yellow)" : "var(--green)";
+        return `<div style="background:var(--bg);border-radius:4px;height:8px;overflow:hidden;margin-top:4px"><div style="width:${p}%;height:100%;background:${c}"></div></div>`;
+      }
+      /* Panel dev: actividad con búsqueda y filtros (usuario / nodo / tipo / estado) */
+      let _actData = { sesiones: [], entornos: [] };
+      async function loadActivity() {
+        try {
+          _actData = await api("/admin/activity");
+          renderActivity();
+        } catch (err) {
+          document.getElementById("activity-body").innerHTML =
+            '<span class="muted">Sin datos: ' + err.message + "</span>";
+        }
+      }
+      function _fillSel(id, values, label) {
+        const sel = document.getElementById(id);
+        const cur = sel.value;
+        sel.innerHTML =
+          `<option value="">${label}</option>` +
+          [...new Set(values)]
+            .sort()
+            .map((v) => `<option${v === cur ? " selected" : ""}>${v}</option>`)
+            .join("");
+      }
+      function renderActivity() {
+        const el = document.getElementById("activity-body");
+        const q = (document.getElementById("act-q").value || "")
+          .toLowerCase()
+          .trim();
+        const fu = document.getElementById("act-user").value;
+        const fn = document.getElementById("act-node").value;
+        const ft = document.getElementById("act-type").value;
+        const fs = document.getElementById("act-status").value;
+        _fillSel(
+          "act-user",
+          [
+            ..._actData.sesiones.map((s) => s.user),
+            ..._actData.entornos.map((e) => e.owner),
+            ...(_actData.web || []).map((w) => w.username),
+          ],
+          "Usuario: todos",
+        );
+        _fillSel(
+          "act-node",
+          [
+            ..._actData.sesiones.map((s) => s.node),
+            ..._actData.entornos.map((e) => e.node || "—"),
+          ],
+          "Nodo: todos",
+        );
+        _fillSel(
+          "act-type",
+          _actData.entornos.map((e) => e.type),
+          "Tipo: todos",
+        );
+        _fillSel(
+          "act-status",
+          ["running", "creating", "stopped"],
+          "Estado: todos",
+        );
+        const match = (txt) => !q || txt.toLowerCase().includes(q);
+        const sesiones = _actData.sesiones.filter(
+          (s) =>
+            (!fu || s.user === fu) &&
+            (!fn || s.node === fn) &&
+            match(s.user + " " + s.node + " " + s.tty),
+        );
+        const entornos = _actData.entornos.filter(
+          (e) =>
+            (!fu || e.owner === fu) &&
+            (!fn || e.node === fn) &&
+            (!ft || e.type === ft) &&
+            (!fs || e.status === fs) &&
+            match(e.owner + " " + e.name + " " + (e.node || "") + " " + e.type),
+        );
+        let html = "";
+        // Conexiones activas en la PLATAFORMA (logins web; activa = actividad en los últimos 15 min)
+        const web = (_actData.web || []).filter(
+          (w) => (!fu || w.username === fu) && match(w.username),
+        );
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Conexiones activas en k3slab</b><span class="muted" style="font-size:12px">${web.filter((w) => w.activo).length} activa(s) en la plataforma</span></div>`;
+        html += !web.length
+          ? '<div class="muted">Nadie ha iniciado sesión en la plataforma.</div>'
+          : '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">' +
+            '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Usuario</th><th>Sesión iniciada</th><th>Última actividad</th><th>Estado</th></tr>' +
+            web
+              .map(
+                (w) =>
+                  `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${w.username}</b></td><td>${fmt(w.login_at)}</td><td>${fmt(w.last_seen)}</td><td><span class="badge ${w.activo ? "running" : "stopped"}">${w.activo ? "ACTIVA" : "inactiva"}</span></td></tr>`,
+              )
+              .join("") +
+            "</table>";
+        // Sesiones SSH/consola en los nodos + botón de desconectar por sesión
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Sesiones SSH en los nodos</b><span class="muted" style="font-size:12px">${sesiones.length} sesión(es)</span></div>`;
+        html += !sesiones.length
+          ? '<div class="muted">Sin conexiones con estos filtros.</div>'
+          : '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">' +
+            '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Usuario</th><th>Nodo</th><th>TTY</th><th>Desde</th><th>Login</th><th>Idle</th><th></th></tr>' +
+            sesiones
+              .map(
+                (s) =>
+                  `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${s.user}</b></td><td>${s.node}</td><td>${s.tty}</td><td>${s.desde}</td><td>${s.login}</td><td>${s.idle || "—"}</td><td style="text-align:right">${s.tty && s.tty !== "-" ? `<button class="danger" style="padding:4px 10px;font-size:12px" onclick="openKick('${s.node}','${s.tty}','${s.user}','${s.node_ip || ""}')">Desconectar</button>` : ""}</td></tr>`,
+              )
+              .join("") +
+            "</table>";
+        // Entornos (estado real del clúster)
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Entornos</b><span class="muted" style="font-size:12px">${entornos.length} entorno(s)</span></div>`;
+        html += !entornos.length
+          ? '<div class="muted">Sin entornos con estos filtros.</div>'
+          : '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">' +
+            '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Dueño</th><th>Entorno</th><th>Tipo</th><th>Nodo</th><th>Estado</th><th>GPU</th></tr>' +
+            entornos
+              .map(
+                (e) =>
+                  `<tr style="border-top:1px solid #ffffff14"><td style="padding:6px 8px 6px 0"><b>${e.owner}</b></td><td>${e.name}</td><td>${e.type}</td><td>${e.node || "—"}</td><td><span class="badge ${e.status}">${e.status}</span></td><td>${e.gpu ? "✓" : ""}</td></tr>`,
+              )
+              .join("") +
+            "</table>";
+        // Salida cruda de `who` por nodo (lo que reporta cada servidor, sin filtrar)
+        const whoRaw = _actData.who_raw || [];
+        if (whoRaw.length) {
+          html +=
+            '<div style="margin-bottom:6px"><b style="font-size:13px">who · salida cruda por nodo</b> <span class="muted" style="font-size:12px">(sin filtrar, tal como la reporta cada servidor)</span></div>';
+          html +=
+            '<div class="who-grid">' +
+            whoRaw
+              .map(
+                (w) =>
+                  `<div class="who-term"><b>${w.node}</b><pre>${w.out.replace(/</g, "&lt;")}</pre></div>`,
+              )
+              .join("") +
+            "</div>";
+        }
+        el.innerHTML = html;
+        el.classList.remove("muted");
+      }
+      /* Modal con el comando para desconectar una sesión (se ejecuta manual en la terminal) */
+      function openKick(node, tty, user, ip) {
+        const me = (auth() || {}).username || "usuario";
+        document.getElementById("k-title").textContent =
+          `${user} · ${node} · ${tty}`;
+        document.getElementById("k-cmd").textContent =
+          `ssh -t ${me}@${ip} "sudo pkill -t ${tty}"`;
+        document.getElementById("kick-modal").style.display = "flex";
+      }
+      function closeKick() {
+        document.getElementById("kick-modal").style.display = "none";
+      }
+      async function loadServers() {
+        try {
+          const d = await api("/admin/servers");
+          document.getElementById("grafana-link").href = d.grafana_url;
+          document.getElementById("servers-grid").innerHTML = d.servers
+            .map((s) => {
+              const ramPct =
+                s.ram_used != null && s.ram_total
+                  ? (s.ram_used / s.ram_total) * 100
+                  : null;
+              const diskPct =
+                s.disk_total && s.disk_free != null
+                  ? ((s.disk_total - s.disk_free) / s.disk_total) * 100
+                  : null;
+              const nGpu = (s.gpus || []).length;
+              const gpuRows = nGpu
+                ? s.gpus
+                    .map((gpu) => {
+                      const vp = gpu.vram_total
+                        ? (gpu.vram_used / gpu.vram_total) * 100
+                        : null;
+                      return `<div style="margin-top:8px">
           <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span>GPU ${gpu.idx} · ${gpu.model||'—'}</span>
-            <span class="muted">${Math.round(gpu.util||0)}% util · ${Math.round(gpu.vram_used||0)}/${Math.round(gpu.vram_total||0)} MiB</span>
+            <span>GPU ${gpu.idx} · ${gpu.model || "—"}</span>
+            <span class="muted">${Math.round(gpu.util || 0)}% util · ${Math.round(gpu.vram_used || 0)}/${Math.round(gpu.vram_total || 0)} MiB</span>
           </div>
-          ${vp!=null?_bar(vp):''}
+          ${vp != null ? _bar(vp) : ""}
         </div>`;
-      }).join('') : '<div class="muted" style="font-size:12px;margin-top:8px">GPU sin datos (dcgm-exporter caído en este host)</div>';
-      return `<div class="card">
+                    })
+                    .join("")
+                : '<div class="muted" style="font-size:12px;margin-top:8px">GPU sin datos (dcgm-exporter caído en este host)</div>';
+              return `<div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <h3 style="margin:0"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.online?'var(--green)':'var(--red)'};margin-right:6px"></span>${s.nombre}</h3>
-          <span class="muted" style="font-size:12px">${s.hostname||'—'} · ${s.ip}</span>
+          <h3 style="margin:0"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.online ? "var(--green)" : "var(--red)"};margin-right:6px"></span>${s.nombre}</h3>
+          <span class="muted" style="font-size:12px">${s.hostname || "—"} · ${s.ip}</span>
         </div>
-        <div class="muted" style="font-size:12px;margin:6px 0 12px">${s.os||'?'} · kernel ${s.kernel||'?'} · uptime ${s.uptime||'?'}</div>
+        <div class="muted" style="font-size:12px;margin:6px 0 12px">${s.os || "?"} · kernel ${s.kernel || "?"} · uptime ${s.uptime || "?"}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:12px">
-          <div><div style="display:flex;justify-content:space-between"><span>CPU ${s.cores||'?'} núcleos</span><span>${s.cpu_pct!=null?s.cpu_pct+'%':'—'}</span></div>${_bar(s.cpu_pct)}
-               <div class="muted" style="margin-top:2px">load ${s.load1??'—'} / ${s.load5??'—'} / ${s.load15??'—'}</div></div>
-          <div><div style="display:flex;justify-content:space-between"><span>RAM</span><span>${s.ram_used!=null?_gb(s.ram_used)+' GB':'—'} / ${s.ram_total?_gb(s.ram_total)+' GB':'—'}</span></div>${ramPct!=null?_bar(ramPct):''}</div>
-          <div><div style="display:flex;justify-content:space-between"><span>Disco /</span><span>${diskPct!=null?diskPct.toFixed(0)+'% · libre '+_gb(s.disk_free)+' GB':'—'}</span></div>${diskPct!=null?_bar(diskPct):''}</div>
-          <div><div style="display:flex;justify-content:space-between"><span>Contenedores</span><span>${s.contenedores??'—'}</span></div>
-               <div class="muted" style="margin-top:2px">${s.pods_k3s?`${s.pods_k3s} pods k3s en este nodo`:''}</div></div>
+          <div><div style="display:flex;justify-content:space-between"><span>CPU ${s.cores || "?"} núcleos</span><span>${s.cpu_pct != null ? s.cpu_pct + "%" : "—"}</span></div>${_bar(s.cpu_pct)}
+               <div class="muted" style="margin-top:2px">load ${s.load1 ?? "—"} / ${s.load5 ?? "—"} / ${s.load15 ?? "—"}</div></div>
+          <div><div style="display:flex;justify-content:space-between"><span>RAM</span><span>${s.ram_used != null ? _gb(s.ram_used) + " GB" : "—"} / ${s.ram_total ? _gb(s.ram_total) + " GB" : "—"}</span></div>${ramPct != null ? _bar(ramPct) : ""}</div>
+          <div><div style="display:flex;justify-content:space-between"><span>Disco /</span><span>${diskPct != null ? diskPct.toFixed(0) + "% · libre " + _gb(s.disk_free) + " GB" : "—"}</span></div>${diskPct != null ? _bar(diskPct) : ""}</div>
+          <div><div style="display:flex;justify-content:space-between"><span>Contenedores</span><span>${s.contenedores ?? "—"}</span></div>
+               <div class="muted" style="margin-top:2px">${s.pods_k3s ? `${s.pods_k3s} pods k3s en este nodo` : ""}</div></div>
         </div>
         <div style="margin-top:12px;font-size:12px">
-          <div style="display:flex;justify-content:space-between"><span>GPUs (${nGpu})</span><span class="muted">${nGpu?'Driver '+s.gpus[0].driver:'—'}</span></div>
+          <div style="display:flex;justify-content:space-between"><span>GPUs (${nGpu})</span><span class="muted">${nGpu ? "Driver " + s.gpus[0].driver : "—"}</span></div>
           ${gpuRows}
         </div>
       </div>`;
-    }).join('');
-  } catch(e){ toast(e.message, false); }
-}
+            })
+            .join("");
+        } catch (e) {
+          toast(e.message, false);
+        }
+      }
 
-/* ---------- init ---------- */
-(function(){
-  const a = auth();
-  if (a && a.token) enter(a);
-  else { show('login'); setTimeout(()=>reveal(document.getElementById('v-login')), 250); }
-  // seguro: si algo falla, nunca dejar el splash colgado
-  setTimeout(hideBoot, 6000);
-  setInterval(()=>{ const a2 = auth();
-    if (a2 && document.getElementById('v-dash').classList.contains('active')) loadEnvs();
-    if (a2 && document.getElementById('v-servers').classList.contains('active')) { loadServers(); loadActivity(); }
-  }, 30000);
-})();
-</script>
-</body>
+      /* ---------- init ---------- */
+      (function () {
+        const a = auth();
+        if (a && a.token) enter(a);
+        else {
+          show("login");
+          setTimeout(() => reveal(document.getElementById("v-login")), 250);
+        }
+        // seguro: si algo falla, nunca dejar el splash colgado
+        setTimeout(hideBoot, 6000);
+        setInterval(() => {
+          const a2 = auth();
+          if (
+            a2 &&
+            document.getElementById("v-dash").classList.contains("active")
+          )
+            loadEnvs();
+          if (
+            a2 &&
+            document.getElementById("v-servers").classList.contains("active")
+          ) {
+            loadServers();
+            loadActivity();
+          }
+        }, 30000);
+      })();
+    </script>
+  </body>
 </html>

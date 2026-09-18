@@ -63,6 +63,14 @@ class ActivityLog(Base):
     ts = Column(DateTime, default=now)
 
 
+class WebSesion(Base):
+    """Sesiones en la plataforma (logins web): para 'Conexiones activas en k3slab'."""
+    __tablename__ = "web_sesiones"
+    username = Column(String, primary_key=True)
+    login_at = Column(DateTime, default=now)
+    last_seen = Column(DateTime, default=now)  # actividad en el panel (throttle 1 write/min)
+
+
 def init_db():
     Base.metadata.create_all(engine)
 

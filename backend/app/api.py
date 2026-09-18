@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from . import auth, config, k8s, manifests
-from .db import ActivityLog, Catalog, Env, SessionLocal, User, now
+from .db import ActivityLog, Catalog, Env, SessionLocal, User, WebSesion, now
 
 router = APIRouter(prefix="/api")
 
@@ -29,6 +29,19 @@ def usuario_actual(authorization: str | None = Header(None), db=Depends(get_db))
     user = db.get(User, data["sub"])
     if not user:
         raise HTTPException(401, "Usuario no existe")
+    # Última actividad en la plataforma (para 'Conexiones activas en k3slab');
+    # throttled: máximo 1 write/min por usuario
+    try:
+        ws = db.get(WebSesion, user.username)
+        ahora = dt.datetime.utcnow()
+        if not ws:
+            db.add(WebSesion(username=user.username, login_at=ahora, last_seen=ahora))
+            db.commit()
+        elif (ahora - (ws.last_seen or ws.login_at)).total_seconds() >= 60:
+            ws.last_seen = ahora
+            db.commit()
+    except Exception:  # noqa: BLE001 — nunca romper auth por el tracking
+        db.rollback()
     return user, data.get("role", "student")
 
 
@@ -72,6 +85,18 @@ def login(body: dict, db=Depends(get_db)):
         user = db.get(User, username)
         role = auth.resolver_rol(user) if user else auth.rol_desde_nodo(username)
         _FAILED_LOGINS.pop(username, None)
+        # Registra la sesión en la plataforma (Conexiones activas en k3slab)
+        try:
+            ahora = dt.datetime.utcnow()
+            ws = db.get(WebSesion, username)
+            if not ws:
+                db.add(WebSesion(username=username, login_at=ahora, last_seen=ahora))
+            else:
+                ws.login_at = ahora
+                ws.last_seen = ahora
+            db.commit()
+        except Exception:  # noqa: BLE001
+            db.rollback()
         return {"token": auth.crear_token(username, role),
                 "username": username, "role": role}
 
@@ -468,17 +493,21 @@ def servers(_=Depends(requiere_dev)):
 def actividad(_=Depends(requiere_dev)):
     """Quién está conectado (sesiones SSH/consola con `w` en los 3 nodos del lab)
     y qué entornos están corriendo (estado real del clúster), para el panel de devs."""
-    # 1. Sesiones en vivo por nodo (la producción NO se toca)
+    # 1. Sesiones en vivo por nodo (la producción NO se toca) + salida cruda de `who`
     sesiones = []
+    who_raw = []
     for name in ("wslab01", "wslab02", "wslab03"):
         ip = config.NODE_IPS.get(name)
         if not ip:
             continue
         try:
-            r = auth._ssh_cmd(ip, "w -h", timeout=8)
+            r = auth._ssh_cmd(ip, "who", timeout=8)
+            w = auth._ssh_cmd(ip, "w -h", timeout=8)
         except Exception:  # noqa: BLE001 — nodo caído/inau-ible
             continue
-        if r.returncode != 0:
+        if r.returncode == 0:
+            who_raw.append({"node": name, "out": r.stdout.strip() or "(sin sesiones)"})
+        if w.returncode != 0:
             continue
         for line in r.stdout.splitlines():
             p = line.split()
@@ -494,7 +523,7 @@ def actividad(_=Depends(requiere_dev)):
             if len(rest) < 3:
                 continue
             sesiones.append({
-                "user": user, "node": name, "tty": tty, "desde": rest[0],
+                "user": user, "node": name, "node_ip": ip, "tty": tty, "desde": rest[0],
                 "login": rest[1], "idle": rest[2],
             })
 
@@ -516,4 +545,13 @@ def actividad(_=Depends(requiere_dev)):
                 "gpu": bool(env.gpu),
                 "shared": env.catalog_id == "playground",
             })
-    return {"sesiones": sesiones, "entornos": entornos}
+    # 3. Sesiones en la plataforma (logins web): activas = actividad en los últimos 15 min
+    corte = dt.datetime.utcnow() - dt.timedelta(minutes=15)
+    web = [{
+        "username": s.username,
+        "login_at": s.login_at.isoformat() if s.login_at else None,
+        "last_seen": s.last_seen.isoformat() if s.last_seen else None,
+        "activo": bool(s.last_seen and s.last_seen >= corte),
+    } for s in db.query(WebSesion).order_by(WebSesion.last_seen.desc()).limit(30).all()]
+
+    return {"sesiones": sesiones, "entornos": entornos, "who_raw": who_raw, "web": web}
