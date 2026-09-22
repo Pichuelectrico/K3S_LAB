@@ -73,7 +73,28 @@ def _to_mi(v: str) -> int:
         return int(v[:-2])
     if v.endswith("Gi"):
         return int(float(v[:-2]) * 1024)
+    if v.endswith("Ki"):
+        return int(int(v[:-2]) / 1024)
     return int(float(v) / (1024 * 1024)) if v.isdigit() else 0
+
+
+def mem_total_nodo(node: str | None) -> int | None:
+    """Memoria TOTAL (capacity) de un nodo en Mi. node=None → el nodo lab Ready
+    más pequeño (referencia conservadora para el host automático).
+    None si kubectl falla o el nodo no está/Ready."""
+    try:
+        nodes = get_nodes()
+    except Exception:  # noqa: BLE001
+        return None
+    lab = [n for n in nodes if n["name"] in config.NODE_IPS and n["status"] == "Ready"]
+    if not lab:
+        return None
+    if node:
+        for n in lab:
+            if n["name"] == node:
+                return _to_mi(n["mem_total"] or "") or None
+        return None
+    return min(_to_mi(n["mem_total"] or "") for n in lab) or None
 
 
 def get_lab_envs() -> dict[str, dict]:

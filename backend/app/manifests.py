@@ -19,15 +19,18 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
                     cat, uid: int | None = None, gid: int | None = None,
                     gpu: bool = False,
                     mount_home: bool = True, password: str | None = None,
-                    shm_size: str = "45Gi",
+                    shm_size: str = "45Gi", mem_limit: str | None = None,
                     extra_volumes: list[dict] | None = None) -> str:
     """Devuelve el YAML multi-documento del entorno (Deployment + Service si aplica).
     gpu: GPU como recurso opcional para CUALQUIER tipo, TODO-O-NADA (el catálogo marca
     el default; python/vscode también pueden pedirla) — el nodo expone todas sus GPUs
     o el subconjunto de config.GPU_VISIBLE_POR_NODO (futuro H200: "0,1,2,3").
     mount_home: montar el /home del owner en el contenedor (toggle en Recursos).
-    shm_size: sizeLimit del /dev/shm en memoria (colab/matlab/python; default 45Gi) —
-    sin limit de memoria el kubelet dimensiona el tmpfs directo al sizeLimit.
+    shm_size: sizeLimit del /dev/shm en memoria (colab/matlab/python) — calculado
+    según el nodo (low/medium/max); sin limit de memoria el kubelet dimensiona el
+    tmpfs directo al sizeLimit.
+    mem_limit: límite de memoria del pod (opción ram low/medium) o None = sin
+    límites (ram max, default) — el request siempre queda del catálogo.
     extra_volumes: volúmenes extra (solo devs) [{path: str, ro: bool}] — hostPath del
     nodo montado en el MISMO path dentro del pod."""
     labels = {"k3slab/managed": "yes", "k3slab/owner": owner,
@@ -49,6 +52,10 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
             "resources": {"requests": {"cpu": cat.cpu, "memory": cat.mem}},
         }],
     }
+    # Límite de memoria (opción ram low/medium, calculado según el nodo); None =
+    # sin límites (ram max, default). Nunca limitamos CPU (siempre burst).
+    if mem_limit:
+        pod_spec["containers"][0]["resources"]["limits"] = {"memory": mem_limit}
     if node:
         # Host elegido por el usuario; si no, k3s lo asigna (balanceo nativo)
         pod_spec["nodeSelector"] = {"kubernetes.io/hostname": node}

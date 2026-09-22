@@ -1,7 +1,6 @@
 """API del K3S Lab. Filtrado por rol SIEMPRE en el backend (nunca confiar en el frontend)."""
 import datetime as dt
 import json
-import re
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
@@ -170,6 +169,9 @@ def nodos(db=Depends(get_db)):
             "status": spec["status"],
             "cpu_used": t.get("cpu_m", 0),
             "mem_used": t.get("mem_mi", 0),
+            # Memoria TOTAL (capacity, parseada a Mi) para calcular las opciones
+            # low/medium/max de RAM/SHM en el wizard según el nodo
+            "mem_total_mi": k8s._to_mi(spec.get("mem_total") or "") if spec.get("mem_total") else 0,
             "gpu_model": spec["gpu_model"],
             "vram_gb": spec["vram_gb"],
             "gpu_count": gpu_counts.get(name, 0),
@@ -262,20 +264,27 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
             raise HTTPException(400, f"El usuario '{para}' no existe en el nodo (revisa el nombre)")
     owner = para if (para and not es_pg) else user.username
 
-    # shm-size avanzado (default 45g): normaliza a cantidad k8s válida
-    # ("45"/"45g" → "45Gi"; "512m" → "512Mi"; "45Gi" pasa tal cual)
-    shm_raw = (body.get("shm_size") or "").strip() or "45g"
-    m = re.fullmatch(r"(\d+)([a-zA-Z]*)", shm_raw)
-    if not m:
-        raise HTTPException(400, f"shm_size inválido: '{shm_raw}' (ej: 45g, 512m, 45Gi)")
-    num, unit = m.groups()
-    u = unit.lower()
-    if u in ("", "g", "gi"):
-        shm_size = f"{num}Gi"
-    elif u in ("m", "mi"):
-        shm_size = f"{num}Mi"
+    # RAM y SHM (avanzadas, devs): low / medium / max — calculadas según la memoria
+    # TOTAL del nodo elegido (o del nodo lab Ready más pequeño si el host es
+    # automático): low ≈ 1/8 del total (un poco más del mínimo, razonable de usar),
+    # medium ≈ 1/2 del total (default SHM), max = sin límites (default RAM; para
+    # SHM, todo el total del nodo). Fallback fijo si kubectl no responde.
+    ram = (body.get("ram") or "max").strip().lower()
+    shm = (body.get("shm") or "medium").strip().lower()
+    if ram not in ("low", "medium", "max") or shm not in ("low", "medium", "max"):
+        raise HTTPException(400, "ram/shm deben ser low, medium o max")
+    total_mi = k8s.mem_total_nodo(node or None)
+    if total_mi:
+        low_gi = max(1, round(total_mi / 8 / 1024))
+        med_gi = max(1, round(total_mi / 2 / 1024))
+        tot_gi = max(1, round(total_mi / 1024))
     else:
-        raise HTTPException(400, f"shm_size inválido: '{shm_raw}' (unidades soportadas: g o m)")
+        low_gi, med_gi, tot_gi = 6, 23, 46
+    ram_gi = {"low": low_gi, "medium": med_gi}.get(ram)  # max → None (sin límites)
+    mem_limit = f"{ram_gi}Gi" if ram_gi else None
+    shm_size = None
+    if cat.id in ("colab", "matlab", "python"):
+        shm_size = f"{ {'low': low_gi, 'medium': med_gi, 'max': tot_gi}[shm] }Gi"
 
     # Volúmenes extra (solo devs): hostPath del nodo montado en el MISMO path
     # dentro del pod, rw o ro. Riesgo real (path arbitrario del nodo) → devs only.
@@ -349,7 +358,8 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     yaml_str = manifests.build_manifests(env.name, env.owner, env.node, nodeport, cat,
                                          uid=uid, gid=gid, gpu=wants_gpu,
                                          mount_home=mount_home, password=env.password,
-                                         shm_size=shm_size, extra_volumes=vols_extra)
+                                         shm_size=shm_size or "45Gi",
+                                         mem_limit=mem_limit, extra_volumes=vols_extra)
     ok, out = k8s.apply_yaml(yaml_str)
     if not ok:
         db.delete(env)

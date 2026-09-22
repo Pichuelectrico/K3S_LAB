@@ -1120,14 +1120,40 @@
               />
             </div>
           </div>
-          <details id="adv-wrap" style="margin-top: 14px">
+          <details id="adv-wrap" style="margin-top: 14px; display: none">
             <summary
               class="muted"
               style="cursor: pointer; font-size: 12.5px; user-select: none"
             >
-              Opciones avanzadas
+              Opciones avanzadas (devs)
             </summary>
             <div class="res-grid" style="margin-top: 12px">
+              <div class="res-card" id="res-ram" style="cursor: default">
+                <div class="res-head">
+                  <span class="res-ico">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--fg)"
+                      stroke-width="1.7"
+                    >
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="M7 5v14M11 5v14M15 5v14M19 5v14" />
+                    </svg>
+                  </span>
+                  <div>
+                    <div class="res-title">Límite de RAM</div>
+                    <div class="res-sub">
+                      se calcula según la memoria del nodo elegido
+                    </div>
+                  </div>
+                </div>
+                <select id="opt-ram">
+                  <option value="max" selected>max · sin límites</option>
+                  <option value="low">low</option>
+                  <option value="medium">medium</option>
+                </select>
+              </div>
               <div class="res-card" id="res-shm" style="cursor: default">
                 <div class="res-head">
                   <span class="res-ico">
@@ -1148,13 +1174,11 @@
                     </div>
                   </div>
                 </div>
-                <input
-                  type="text"
-                  id="opt-shm"
-                  placeholder="vacío = 45g (default)"
-                  maxlength="12"
-                  autocomplete="off"
-                />
+                <select id="opt-shm">
+                  <option value="low">low</option>
+                  <option value="medium" selected>medium (default)</option>
+                  <option value="max">max</option>
+                </select>
               </div>
             </div>
             <div id="adv-vols" style="display: none; margin-top: 12px">
@@ -1778,9 +1802,11 @@
         ]);
         lastNodes = nodes;
         document.getElementById("opt-gpu").checked = false;
-        document.getElementById("opt-shm").value = "";
+        document.getElementById("opt-ram").value = "max";
+        document.getElementById("opt-shm").value = "medium";
         document.getElementById("vols-list").innerHTML = "";
         document.getElementById("adv-wrap").open = false;
+        updateAdvLabels();
         document.getElementById("opt-select-host").checked = false;
         document.getElementById("host-section").style.display = "none";
         document.getElementById("opt-pass").value = "";
@@ -1854,6 +1880,7 @@
           .querySelectorAll(".node-card")
           .forEach((c) => c.classList.remove("sel"));
         el.classList.add("sel");
+        updateAdvLabels();
         checkLaunch();
       }
       function selectHostChecked() {
@@ -1869,6 +1896,7 @@
           document
             .querySelectorAll(".node-card")
             .forEach((c) => c.classList.remove("sel"));
+          updateAdvLabels();
         }
         checkLaunch();
       }
@@ -1880,7 +1908,7 @@
       }
 
       /* Recursos (GPU todo-o-nada + montar /home + host dedicado + contraseña
-         configurable + avanzadas: shm-size y volúmenes extra (devs)) */
+         configurable + avanzadas (devs): límite de RAM, SHM y volúmenes extra) */
       /* Paso 4 (solo devs): ¿el entorno es para mí o para otro usuario? */
       function toggleParaUser() {
         const checked = document.querySelector('input[name="para-r"]:checked');
@@ -1909,6 +1937,34 @@
         if (ro) row.querySelector(".vol-mode").value = "ro";
         list.appendChild(row);
       }
+      /* Avanzadas (devs): etiquetas low/medium/max calculadas según la memoria
+         TOTAL del nodo elegido (o del nodo Ready más pequeño si k3s asigna) */
+      function updateAdvLabels() {
+        const cand = (lastNodes || []).filter(
+          (x) => x.status === "Ready" && (x.mem_total_mi || 0) > 0,
+        );
+        if (!cand.length) return;
+        const node = (lastNodes || []).find((x) => x.name === selNode);
+        const totMi =
+          node && node.mem_total_mi
+            ? node.mem_total_mi
+            : Math.min(...cand.map((x) => x.mem_total_mi));
+        const low = Math.max(1, Math.round(totMi / 8 / 1024));
+        const med = Math.max(1, Math.round(totMi / 2 / 1024));
+        const tot = Math.max(1, Math.round(totMi / 1024));
+        const ramSel = document.getElementById("opt-ram");
+        const shmSel = document.getElementById("opt-shm");
+        if (ramSel) {
+          ramSel.options[0].textContent = "max · sin límites";
+          ramSel.options[1].textContent = `low · ~${low}Gi`;
+          ramSel.options[2].textContent = `medium · ~${med}Gi`;
+        }
+        if (shmSel) {
+          shmSel.options[0].textContent = `low · ~${low}Gi`;
+          shmSel.options[1].textContent = `medium · ~${med}Gi`;
+          shmSel.options[2].textContent = `max · ~${tot}Gi`;
+        }
+      }
       function updateRecursos() {
         const card = document.getElementById("recursos-card");
         const recursoTypes = [
@@ -1921,6 +1977,7 @@
         if (!selType || !recursoTypes.includes(selType)) {
           card.style.display = "none";
           document.getElementById("para-section").style.display = "none";
+          document.getElementById("adv-wrap").style.display = "none";
           return;
         }
         card.style.display = "block";
@@ -1934,14 +1991,15 @@
           ? ""
           : "none";
         if (!showPass) document.getElementById("opt-pass").value = "";
-        // shm-size: aplica a colab/matlab/python (vscode no monta /dev/shm)
+        // Avanzadas (solo devs): RAM límite (todos los tipos) + SHM (colab/matlab/
+        // python, los únicos que montan /dev/shm) + volúmenes extra (nunca playground)
+        document.getElementById("adv-wrap").style.display = esDev ? "" : "none";
         const showShm =
           selType === "colab" || selType === "matlab" || selType === "python";
         document.getElementById("res-shm").style.display = showShm ? "" : "none";
-        if (!showShm) document.getElementById("opt-shm").value = "";
-        // Volúmenes extra: solo devs (hostPath arbitrario del nodo)
         document.getElementById("adv-vols").style.display =
           esDev && !esPg ? "" : "none";
+        updateAdvLabels();
         // Paso 4 (destinatario): solo devs y nunca para el playground
         const paraSec = document.getElementById("para-section");
         paraSec.style.display = esDev && !esPg ? "block" : "none";
@@ -1972,11 +2030,11 @@
           const pw = (document.getElementById("opt-pass").value || "").trim();
           if (pw) body.password = pw;
           if (document.getElementById("opt-gpu").checked) body.gpu = true;
-          // shm-size avanzado (vacío = default 45g del backend)
-          const shm = (document.getElementById("opt-shm").value || "").trim();
-          if (shm) body.shm_size = shm;
-          // Volúmenes extra (solo devs)
+          // Avanzadas (solo devs): límite de RAM, SHM y volúmenes extra.
+          // ram/shm: low/medium/max — el backend calcula las cantidades según el nodo.
           if (esDev) {
+            body.ram = document.getElementById("opt-ram").value;
+            body.shm = document.getElementById("opt-shm").value;
             const vols = [
               ...document.querySelectorAll("#vols-list .vol-path"),
             ]
