@@ -209,9 +209,10 @@ def _env_a_json(env: Env, nodeport: int | None) -> dict:
 def listar_envs(user_role=Depends(usuario_actual), db=Depends(get_db)):
     user, role = user_role
     q = db.query(Env).filter(Env.status != "deleting")
-    if role != "dev":
-        # Los estudiantes ven sus entornos + el playground compartido (solo conectar)
-        q = q.filter((Env.owner == user.username) | (Env.catalog_id == "playground"))
+    # TODOS (devs incluidos) ven sus entornos + el playground compartido;
+    # el inventario completo de todos los usuarios vive en el Panel Dev —
+    # no lo duplicamos aquí
+    q = q.filter((Env.owner == user.username) | (Env.catalog_id == "playground"))
     deploy_info = k8s.get_lab_envs()
     out = []
     for env in q.order_by(Env.created_at.desc()).all():
