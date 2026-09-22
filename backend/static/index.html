@@ -2380,6 +2380,9 @@
         setTimeout(hideBoot, 6000);
         setInterval(() => {
           const a2 = auth();
+          // Heartbeat: mantiene la sesión "activa" en 'Conexiones en k3slab' esté
+          // en la vista que esté (last_seen se refresca en /ping, umbral 5 min)
+          if (a2) api("/ping").catch(() => {});
           if (
             a2 &&
             document.getElementById("v-dash").classList.contains("active")

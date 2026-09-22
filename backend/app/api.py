@@ -62,6 +62,18 @@ def requiere_dev(user_role=Depends(usuario_actual)) -> tuple[User, str]:
     return user, role
 
 
+# ---------- heartbeat ----------
+
+@router.get("/ping")
+def ping(user_role=Depends(usuario_actual)):
+    """Pulso ligero del frontend (cada 30s mientras la pestaña esté abierta):
+    usuario_actual ya refresca WebSesion.last_seen como efecto secundario, así
+    'quién está conectado' refleja la sesión real y no se queda pegado en
+    ACTIVA 15 min tras cerrar la pestaña."""
+    user, _role = user_role
+    return {"ok": True, "user": user.username}
+
+
 # ---------- auth ----------
 
 # Rate limit anti brute force (in-memory, MVP): 5 fallos por usuario / 5 min
@@ -631,10 +643,12 @@ def actividad(_=Depends(requiere_dev)):
                 "gpu": bool(env.gpu),
                 "shared": env.catalog_id == "playground",
             })
-    # 3. Sesiones en la plataforma (logins web): activas = actividad en los últimos 15 min.
-    # Se devuelven TODAS las filas (1 por usuario, PK username) para que el frontend
-    # filtre por recencia (última hora por defecto / todos).
-    corte = dt.datetime.utcnow() - dt.timedelta(minutes=15)
+    # 3. Sesiones en la plataforma (logins web): activas = actividad en los últimos
+    # 5 min (el frontend manda un heartbeat /ping cada 30s mientras la pestaña esté
+    # abierta, así last_seen se refresca esté en la vista que esté). Se devuelven
+    # TODAS las filas (1 por usuario, PK username) para que el frontend filtre por
+    # recencia (última hora por defecto / todos).
+    corte = dt.datetime.utcnow() - dt.timedelta(minutes=5)
     web = [{
         "username": s.username,
         "login_at": s.login_at.isoformat() if s.login_at else None,
