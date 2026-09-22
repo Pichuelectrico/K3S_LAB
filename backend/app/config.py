@@ -44,6 +44,12 @@ SCHEDULER_INTERVAL_S = int(os.getenv("K3SLAB_SCHEDULER_INTERVAL_S", "60"))  # MV
 # Cuotas
 MAX_ENVS_ACTIVOS_POR_STUDENT = int(os.getenv("K3SLAB_MAX_ENVS_STUDENT", "1"))
 
+# GPUs visibles por nodo (NVIDIA_VISIBLE_DEVICES del runtime NVIDIA): mecanismo
+# TODO-O-NADA — "all" (default) = todas las GPUs del nodo, sin elegir índice.
+# Si un nodo debe exponer solo un subconjunto se declara aquí y en ese nodo
+# "todas" significa ese subconjunto (futuro H200: {"h200": "0,1,2,3"}).
+GPU_VISIBLE_POR_NODO = {}
+
 JWT_EXPIRA_H = 12
 
 # Contraseña de code-server (vscode) en el MVP — Fase 2: auth por usuario (PAM/SSO)

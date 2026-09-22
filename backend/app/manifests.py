@@ -3,36 +3,65 @@
 Convenciones (ver CONTEXT.md §4):
 - Labels: k3slab/managed=yes · k3slab/owner=<usuario> · k3slab/type=<tipo> · k3slab/env=<nombre>
 - Pods GPU (colab): runtimeClassName nvidia + hostPID true (paridad con --pid=host actual)
-- Mounts colab: /media ro, /mnt ro, /home/<owner> en /home/workdir + /dev/shm en memoria (8Gi)
+- Mounts colab: /media ro, /mnt ro, /home/<owner> en /home/workdir + /dev/shm en memoria
+  (shm_size, default 45g — el LIMIT de memoria sube a shm+margen para que sea real)
 - NodePort del rango propio 31000-31999 (reemplaza el "baile de puertos" manual)
 """
 import hashlib
 import json
+import re
 
 import yaml
 
 from . import config
 
 
+def _mem_bytes(q: str) -> int:
+    """Parsea una cantidad de memoria k8s ("8Gi", "512Mi", "45G") a bytes."""
+    m = re.fullmatch(r"(\d+)([KMGT]?i?)", (q or "").strip())
+    if not m:
+        return 0
+    mult = {"": 1, "K": 10**3, "Ki": 2**10, "M": 10**6, "Mi": 2**20,
+            "G": 10**9, "Gi": 2**30, "T": 10**12, "Ti": 2**40}[m.group(2)]
+    return int(m.group(1)) * mult
+
+
 def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
                     cat, uid: int | None = None, gid: int | None = None,
-                    gpu: bool = False, gpu_index: int | None = None,
-                    mount_home: bool = True, password: str | None = None) -> str:
+                    gpu: bool = False,
+                    mount_home: bool = True, password: str | None = None,
+                    shm_size: str = "45Gi",
+                    extra_volumes: list[dict] | None = None) -> str:
     """Devuelve el YAML multi-documento del entorno (Deployment + Service si aplica).
-    gpu/gpu_index: GPU como recurso opcional para CUALQUIER tipo (el catálogo marca el
-    default; python/vscode también pueden pedirla). gpu_index fija CUDA_VISIBLE_DEVICES.
-    mount_home: montar el /home del owner en el contenedor (toggle en Recursos)."""
+    gpu: GPU como recurso opcional para CUALQUIER tipo, TODO-O-NADA (el catálogo marca
+    el default; python/vscode también pueden pedirla) — el nodo expone todas sus GPUs
+    o el subconjunto de config.GPU_VISIBLE_POR_NODO (futuro H200: "0,1,2,3").
+    mount_home: montar el /home del owner en el contenedor (toggle en Recursos).
+    shm_size: sizeLimit del /dev/shm en memoria (colab/matlab/python; default 45Gi).
+    OJO: el kubelet dimensiona el tmpfs al min(sizeLimit, memory LIMIT) del pod →
+    cuando shm > mem del catálogo subimos el LIMIT (nunca el request, para no
+    reservar el nodo entero: comportamiento tipo docker --shm-size con burst).
+    extra_volumes: volúmenes extra (solo devs) [{path: str, ro: bool}] — hostPath del
+    nodo montado en el MISMO path dentro del pod."""
     labels = {"k3slab/managed": "yes", "k3slab/owner": owner,
               "k3slab/type": cat.id, "k3slab/env": name}
+
+    # shm en memoria (colab/matlab/python): LIMIT de memoria >= shm + 2Gi de margen
+    # (el tmpfs cobra sus páginas al cgroup del pod); el REQUEST queda del catálogo.
+    aplica_shm = cat.id in ("colab", "matlab", "python")
+    mem_limit = cat.mem
+    if aplica_shm:
+        want = _mem_bytes(shm_size) + 2 * 2**30
+        if _mem_bytes(cat.mem) < want:
+            mem_limit = f"{(want + 2**30 - 1) // 2**30}Gi"
 
     pod_spec: dict = {
         "containers": [{
             "name": "main",
             "image": cat.image,
-            # requests=limits: el scheduler de k3s bin-packea por recursos garantizados
-            # (balanceo nativo cuando no se fija nodo)
+            # request del catálogo (scheduler); limit = cat.mem o shm+margen si aplica
             "resources": {"requests": {"cpu": cat.cpu, "memory": cat.mem},
-                          "limits": {"cpu": cat.cpu, "memory": cat.mem}},
+                          "limits": {"cpu": cat.cpu, "memory": mem_limit}},
         }],
     }
     if node:
@@ -57,26 +86,30 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         pod_spec["containers"][0]["ports"] = [{"containerPort": p} for p in ports]
 
     # GPU como recurso (para cualquier tipo): runtime nvidia + hostPID (paridad con
-    # --pid=host de los colabs actuales: nvidia-smi ve procesos) + CUDA_VISIBLE_DEVICES
+    # --pid=host de los colabs actuales: nvidia-smi ve procesos) + TODO-O-NADA
     wants_gpu = gpu or bool(cat.gpu)
     if wants_gpu:
         pod_spec["runtimeClassName"] = "nvidia"
         pod_spec["hostPID"] = True
         # Sin NVIDIA_VISIBLE_DEVICES el toolkit NO inyecta drivers/nvidia-smi en imágenes
-        # que no sean CUDA (p.ej. python-slim, code-server). Con índice: solo esa GPU.
+        # que no sean CUDA (p.ej. python-slim, code-server). Todo-o-nada: "all" (todas
+        # las GPUs del nodo) o el subconjunto declarado en GPU_VISIBLE_POR_NODO.
         envs.append({"name": "NVIDIA_VISIBLE_DEVICES",
-                     "value": str(int(gpu_index)) if gpu_index is not None else "all"})
+                     "value": config.GPU_VISIBLE_POR_NODO.get(node, "all")})
 
     # Volúmenes/mounts según tipo
     volumes, mounts = [], []
+    # /dev/shm en memoria (tmpfs) para colab/matlab/python: crucial para DataLoader
+    # de PyTorch etc. Tamaño configurable (shm_size, default 45g antes 8Gi fijo).
+    if aplica_shm:
+        volumes.append({"name": "shm", "emptyDir": {"medium": "Memory", "sizeLimit": shm_size}})
+        mounts.append({"name": "shm", "mountPath": "/dev/shm"})
     if cat.id == "colab":
-        volumes = [
-            {"name": "shm", "emptyDir": {"medium": "Memory", "sizeLimit": "8Gi"}},
+        volumes += [
             {"name": "media", "hostPath": {"path": "/media", "type": "DirectoryOrCreate"}},
             {"name": "mnt", "hostPath": {"path": "/mnt", "type": "DirectoryOrCreate"}},
         ]
-        mounts = [
-            {"name": "shm", "mountPath": "/dev/shm"},
+        mounts += [
             {"name": "media", "mountPath": "/media", "readOnly": True},
             {"name": "mnt", "mountPath": "/mnt", "readOnly": True},
         ]
@@ -89,10 +122,10 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         # Corre como el uid/gid del owner en el nodo (los UIDs difieren por nodo —
         # Fase 2: Ansible los unificará) para que los archivos queden con dueño correcto.
         if mount_home:
-            volumes = [
+            volumes += [
                 {"name": "home", "hostPath": {"path": f"/home/{owner}", "type": "DirectoryOrCreate"}},
             ]
-            mounts = [{"name": "home", "mountPath": "/home/coder"}]
+            mounts += [{"name": "home", "mountPath": "/home/coder"}]
         envs += [
             {"name": "HOME", "value": "/home/coder"},
             {"name": "HASHED_PASSWORD",
@@ -121,13 +154,11 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
             " && vncserver :1 -localhost no -geometry 1920x1080"
             " && exec /opt/noVNC/utils/launch.sh --vnc localhost:5901",
         ]
-        volumes = [
-            {"name": "shm", "emptyDir": {"medium": "Memory", "sizeLimit": "8Gi"}},
+        volumes += [
             {"name": "media", "hostPath": {"path": "/media", "type": "DirectoryOrCreate"}},
             {"name": "mnt", "hostPath": {"path": "/mnt", "type": "DirectoryOrCreate"}},
         ]
-        mounts = [
-            {"name": "shm", "mountPath": "/dev/shm"},
+        mounts += [
             {"name": "media", "mountPath": "/media", "readOnly": True},
             {"name": "mnt", "mountPath": "/mnt", "readOnly": True},
         ]
@@ -135,8 +166,22 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
             volumes.append({"name": "home", "hostPath": {"path": f"/home/{owner}", "type": "DirectoryOrCreate"}})
             mounts.append({"name": "home", "mountPath": f"/home/{owner}"})
     if cat.id == "python" and mount_home:
-        volumes = [{"name": "home", "hostPath": {"path": f"/home/{owner}", "type": "DirectoryOrCreate"}}]
-        mounts = [{"name": "home", "mountPath": f"/home/{owner}"}]
+        volumes.append({"name": "home", "hostPath": {"path": f"/home/{owner}", "type": "DirectoryOrCreate"}})
+        mounts.append({"name": "home", "mountPath": f"/home/{owner}"})
+
+    # Volúmenes extra (solo devs): hostPath del nodo montado en el MISMO path dentro
+    # del pod, rw o ro según se indique. DirectoryOrCreate: no falla si aún no existe.
+    for i, v in enumerate(extra_volumes or []):
+        if not v.get("path"):
+            continue
+        vol_name = f"extra-{i}"
+        volumes.append({"name": vol_name,
+                        "hostPath": {"path": v["path"], "type": "DirectoryOrCreate"}})
+        mount = {"name": vol_name, "mountPath": v["path"]}
+        if v.get("ro"):
+            mount["readOnly"] = True
+        mounts.append(mount)
+
     if volumes:
         pod_spec["volumes"] = volumes
         pod_spec["containers"][0]["volumeMounts"] = mounts

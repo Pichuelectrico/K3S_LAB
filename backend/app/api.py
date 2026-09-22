@@ -1,6 +1,7 @@
 """API del K3S Lab. Filtrado por rol SIEMPRE en el backend (nunca confiar en el frontend)."""
 import datetime as dt
 import json
+import re
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
@@ -245,14 +246,57 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     # Host OPCIONAL: si no se elige, k3s lo asigna (balanceo nativo por requests)
     node = (body.get("node_name") or "").strip()
     if node and node not in config.NODE_IPS:
-        raise HTTPException(400, "nodo inválido (elige wslab01, wslab02 o wslab03, o no elijas para que k3s lo asigne)")
+        raise HTTPException(400, "nodo inválido (elige uno de la lista o no elijas para que k3s lo asigne)")
 
-    # GPU como recurso (opcional): default del catálogo; el usuario puede pedirla para
-    # colab/python/vscode/matlab (todos los tipos del catálogo) y elegir el índice
+    # GPU como recurso (opcional): default del catálogo. TODO-O-NADA: sin índices —
+    # el nodo expone todas sus GPUs (o el subconjunto de GPU_VISIBLE_POR_NODO).
     wants_gpu = bool(body.get("gpu", bool(cat.gpu)))
-    gpu_index = body.get("gpu_index")
-    if gpu_index is not None and not wants_gpu:
-        gpu_index = None
+
+    # Destinatario (solo devs, fuera del playground): crear el entorno para OTRO
+    # usuario (dueño real = para). Los students siempre crean para sí mismos.
+    para = (body.get("para") or "").strip()
+    if para and para != user.username and not es_pg:
+        if role != "dev":
+            raise HTTPException(403, "Solo los devs pueden crear entornos para otros usuarios")
+        if not k8s.uid_gid_en_nodo(para, node or "wslab01")[0]:
+            raise HTTPException(400, f"El usuario '{para}' no existe en el nodo (revisa el nombre)")
+    owner = para if (para and not es_pg) else user.username
+
+    # shm-size avanzado (default 45g): normaliza a cantidad k8s válida
+    # ("45"/"45g" → "45Gi"; "512m" → "512Mi"; "45Gi" pasa tal cual)
+    shm_raw = (body.get("shm_size") or "").strip() or "45g"
+    m = re.fullmatch(r"(\d+)([a-zA-Z]*)", shm_raw)
+    if not m:
+        raise HTTPException(400, f"shm_size inválido: '{shm_raw}' (ej: 45g, 512m, 45Gi)")
+    num, unit = m.groups()
+    u = unit.lower()
+    if u in ("", "g", "gi"):
+        shm_size = f"{num}Gi"
+    elif u in ("m", "mi"):
+        shm_size = f"{num}Mi"
+    else:
+        raise HTTPException(400, f"shm_size inválido: '{shm_raw}' (unidades soportadas: g o m)")
+
+    # Volúmenes extra (solo devs): hostPath del nodo montado en el MISMO path
+    # dentro del pod, rw o ro. Riesgo real (path arbitrario del nodo) → devs only.
+    vols_in = body.get("volumes") or []
+    if not isinstance(vols_in, list):
+        raise HTTPException(400, "volumes debe ser una lista de {path, ro}")
+    if vols_in and role != "dev":
+        raise HTTPException(403, "Solo los devs pueden montar volúmenes extra")
+    vols_extra, vistos = [], set()
+    for v in vols_in[:8]:
+        p = (v.get("path") or "").strip() if isinstance(v, dict) else ""
+        if not p:
+            continue
+        if not p.startswith("/"):
+            raise HTTPException(400, f"El path del volumen debe ser absoluto: '{p}'")
+        if p == "/dev/shm":
+            raise HTTPException(400, "'/dev/shm' se controla con shm-size, no como volumen extra")
+        if p in vistos:
+            raise HTTPException(400, f"Volumen duplicado: '{p}'")
+        vistos.add(p)
+        vols_extra.append({"path": p, "ro": bool(v.get("ro"))})
 
     # Cuota: 1 entorno activo por student (los devs sin límite en el MVP);
     # crear el playground no cuenta para la cuota del dev
@@ -277,8 +321,8 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
 
     # El playground comparte nombre fijo (una instancia); el resto lleva el dueño
     nombre = (f"k3slab-playground-{nodeport or 'console'}" if es_pg
-              else f"k3slab-{user.username}-{cat.id}-{nodeport or 'console'}")
-    env = Env(name=nombre, owner=user.username, node=node, catalog_id=cat.id,
+              else f"k3slab-{owner}-{cat.id}-{nodeport or 'console'}")
+    env = Env(name=nombre, owner=owner, node=node, catalog_id=cat.id,
               nodeport=nodeport, gpu=1 if wants_gpu else 0)
     db.add(env)
     db.commit()
@@ -301,10 +345,11 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
         # Con host automático resolvemos el uid en wslab01 (fuente de verdad de las cuentas);
         # ojo: si los uids del usuario difieren entre nodos (usuarios pre-Ansible) y k3s
         # agenda en otro nodo, puede haber mismatch de permisos hasta unificar uids.
-        uid, gid = k8s.uid_gid_en_nodo(user.username, env.node or "wslab01")
+        uid, gid = k8s.uid_gid_en_nodo(env.owner, env.node or "wslab01")
     yaml_str = manifests.build_manifests(env.name, env.owner, env.node, nodeport, cat,
-                                         uid=uid, gid=gid, gpu=wants_gpu, gpu_index=gpu_index,
-                                         mount_home=mount_home, password=env.password)
+                                         uid=uid, gid=gid, gpu=wants_gpu,
+                                         mount_home=mount_home, password=env.password,
+                                         shm_size=shm_size, extra_volumes=vols_extra)
     ok, out = k8s.apply_yaml(yaml_str)
     if not ok:
         db.delete(env)

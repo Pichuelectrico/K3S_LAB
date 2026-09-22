@@ -1013,7 +1013,6 @@
               <input
                 type="checkbox"
                 id="opt-gpu"
-                onchange="updateGpuSelect()"
               />
               <div class="res-head">
                 <span class="res-ico">
@@ -1030,15 +1029,12 @@
                 </span>
                 <div>
                   <div class="res-title">GPU</div>
-                  <div class="res-sub">nvidia-smi visible · runtime NVIDIA</div>
+                  <div class="res-sub">
+                    todas las GPUs del nodo · todo o nada
+                  </div>
                 </div>
                 <span class="switch" aria-hidden="true"></span>
               </div>
-              <div
-                id="gpu-select-wrap"
-                class="chips"
-                style="display: none"
-              ></div>
             </label>
             <label class="res-card" id="res-home">
               <input type="checkbox" id="opt-home" />
@@ -1124,12 +1120,103 @@
               />
             </div>
           </div>
+          <details id="adv-wrap" style="margin-top: 14px">
+            <summary
+              class="muted"
+              style="cursor: pointer; font-size: 12.5px; user-select: none"
+            >
+              Opciones avanzadas
+            </summary>
+            <div class="res-grid" style="margin-top: 12px">
+              <div class="res-card" id="res-shm" style="cursor: default">
+                <div class="res-head">
+                  <span class="res-ico">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--fg)"
+                      stroke-width="1.7"
+                    >
+                      <path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z" />
+                      <path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7" />
+                    </svg>
+                  </span>
+                  <div>
+                    <div class="res-title">shm-size</div>
+                    <div class="res-sub">
+                      /dev/shm en memoria — DataLoader de PyTorch, colas de IPC
+                    </div>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  id="opt-shm"
+                  placeholder="vacío = 45g (default)"
+                  maxlength="12"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+            <div id="adv-vols" style="display: none; margin-top: 12px">
+              <div class="muted" style="font-size: 12px; margin-bottom: 8px">
+                Volúmenes extra (solo devs) — path del nodo montado en el mismo
+                path dentro del pod
+              </div>
+              <div id="vols-list"></div>
+              <button
+                type="button"
+                id="btn-add-vol"
+                onclick="addVolRow()"
+              >
+                + Agregar volumen
+              </button>
+            </div>
+          </details>
         </div>
         <div id="host-section" style="display: none; margin-top: 22px">
           <h2>
             3 · Nodo <span class="muted">(stats en vivo — elige dónde)</span>
           </h2>
           <div class="grid" id="node-list"></div>
+        </div>
+        <div id="para-section" style="display: none; margin-top: 22px">
+          <h2>
+            4 · Destinatario
+            <span class="muted">(solo devs — ¿para quién es el entorno?)</span>
+          </h2>
+          <div class="card" style="max-width: 520px; padding: 16px">
+            <label
+              style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer"
+            >
+              <input
+                type="radio"
+                name="para-r"
+                value="mi"
+                checked
+                onchange="toggleParaUser()"
+              />
+              <span>Para mí (<span class="muted" id="para-me"></span>)</span>
+            </label>
+            <label
+              style="display: flex; align-items: center; gap: 8px; cursor: pointer"
+            >
+              <input
+                type="radio"
+                name="para-r"
+                value="otro"
+                onchange="toggleParaUser()"
+              />
+              <span>Para otro usuario:</span>
+            </label>
+            <input
+              type="text"
+              id="opt-para-user"
+              placeholder="usuario del nodo (ej: dcastellanos)"
+              maxlength="32"
+              autocomplete="off"
+              style="display: none; margin-top: 10px"
+            />
+          </div>
         </div>
         <div style="margin-top: 18px; display: flex; gap: 10px">
           <button onclick="show('dash')">Cancelar</button>
@@ -1353,7 +1440,6 @@
       const API = location.origin + "/api";
       let selType = null,
         selNode = null,
-        selGpu = false,
         lastNodes = [];
 
       /* Logos simplificados de los tipos de entorno */
@@ -1685,7 +1771,6 @@
       /* ---------- nuevo entorno ---------- */
       async function loadNuevo() {
         selType = selNode = null;
-        selGpu = false;
         document.getElementById("btn-launch").disabled = true;
         const [cats, nodes] = await Promise.all([
           api("/catalog"),
@@ -1693,8 +1778,9 @@
         ]);
         lastNodes = nodes;
         document.getElementById("opt-gpu").checked = false;
-        updateGpuSelect();
-        document.getElementById("gpu-select-wrap").innerHTML = "";
+        document.getElementById("opt-shm").value = "";
+        document.getElementById("vols-list").innerHTML = "";
+        document.getElementById("adv-wrap").open = false;
         document.getElementById("opt-select-host").checked = false;
         document.getElementById("host-section").style.display = "none";
         document.getElementById("opt-pass").value = "";
@@ -1792,28 +1878,35 @@
         );
       }
 
-      /* Recursos (GPU opcional + montar /home + host dedicado + contraseña configurable) */
-      function renderGpuChips(n, preserve) {
-        const wrap = document.getElementById("gpu-select-wrap");
-        if (!wrap) return;
-        n = Math.max(0, n | 0);
-        const cur = preserve == null ? "" : String(preserve);
-        let html = `<button type="button" class="chip${cur === "" ? " on" : ""}" data-v="" onclick="pickGpuChip(this,event)">Todas</button>`;
-        for (let i = 0; i < n; i++)
-          html += `<button type="button" class="chip${cur === String(i) ? " on" : ""}" data-v="${i}" onclick="pickGpuChip(this,event)">GPU ${i}</button>`;
-        wrap.innerHTML = html;
+      /* Recursos (GPU todo-o-nada + montar /home + host dedicado + contraseña
+         configurable + avanzadas: shm-size y volúmenes extra (devs)) */
+      /* Paso 4 (solo devs): ¿el entorno es para mí o para otro usuario? */
+      function toggleParaUser() {
+        const checked = document.querySelector('input[name="para-r"]:checked');
+        const otro = checked && checked.value === "otro";
+        const inp = document.getElementById("opt-para-user");
+        inp.style.display = otro ? "block" : "none";
+        if (!otro) inp.value = "";
       }
-      function pickGpuChip(el, ev) {
-        ev.preventDefault();
-        ev.stopPropagation(); // que el click del chip no re-togglee el card
-        el.parentElement
-          .querySelectorAll(".chip")
-          .forEach((c) => c.classList.remove("on"));
-        el.classList.add("on");
-      }
-      function gpuIndexSel() {
-        const on = document.querySelector("#gpu-select-wrap .chip.on");
-        return on ? on.dataset.v : "";
+      /* Volúmenes extra (devs): fila con path + modo (rw/ro) + quitar */
+      function addVolRow(path, ro) {
+        const list = document.getElementById("vols-list");
+        const row = document.createElement("div");
+        row.style.cssText =
+          "display:flex;gap:8px;align-items:center;margin-bottom:8px";
+        row.innerHTML = `
+          <input type="text" class="vol-path" placeholder="/ruta/en/el/nodo"
+            style="flex:1; margin:0" autocomplete="off" maxlength="200" />
+          <select class="vol-mode" style="width: 175px">
+            <option value="rw">Lectura y escritura</option>
+            <option value="ro">Solo lectura</option>
+          </select>
+          <button type="button" title="Quitar"
+            style="padding: 4px 10px"
+            onclick="this.parentElement.remove()">✕</button>`;
+        if (path) row.querySelector(".vol-path").value = path;
+        if (ro) row.querySelector(".vol-mode").value = "ro";
+        list.appendChild(row);
       }
       function updateRecursos() {
         const card = document.getElementById("recursos-card");
@@ -1826,10 +1919,12 @@
         ];
         if (!selType || !recursoTypes.includes(selType)) {
           card.style.display = "none";
+          document.getElementById("para-section").style.display = "none";
           return;
         }
         card.style.display = "block";
         const esPg = selType === "playground";
+        const esDev = (auth() || {}).role === "dev";
         // El playground es compartido: nunca monta home y no usa contraseña
         document.getElementById("res-home").style.display = esPg ? "none" : "";
         // Contraseña configurable para vscode/matlab (vacío = default k3slab)
@@ -1838,34 +1933,33 @@
           ? ""
           : "none";
         if (!showPass) document.getElementById("opt-pass").value = "";
-        // Con host automático usamos el máximo de GPUs entre los nodos Ready
-        const node = (lastNodes || []).find((x) => x.name === selNode);
-        const n =
-          node?.gpu_count ??
-          Math.max(
-            0,
-            ...(lastNodes || [])
-              .filter((x) => x.status === "Ready")
-              .map((x) => x.gpu_count || 0),
-          );
-        renderGpuChips(n, gpuIndexSel());
+        // shm-size: aplica a colab/matlab/python (vscode no monta /dev/shm)
+        const showShm =
+          selType === "colab" || selType === "matlab" || selType === "python";
+        document.getElementById("res-shm").style.display = showShm ? "" : "none";
+        if (!showShm) document.getElementById("opt-shm").value = "";
+        // Volúmenes extra: solo devs (hostPath arbitrario del nodo)
+        document.getElementById("adv-vols").style.display =
+          esDev && !esPg ? "" : "none";
+        // Paso 4 (destinatario): solo devs y nunca para el playground
+        const paraSec = document.getElementById("para-section");
+        paraSec.style.display = esDev && !esPg ? "block" : "none";
+        document.getElementById("para-me").textContent =
+          (auth() || {}).username || "";
+        if (!esDev || esPg) {
+          const r = document.querySelector('input[name="para-r"][value="mi"]');
+          if (r) r.checked = true;
+          document.getElementById("opt-para-user").value = "";
+        }
+        // GPU todo-o-nada: el backend decide el NVIDIA_VISIBLE_DEVICES según el nodo
+        // (todas o el subconjunto de GPU_VISIBLE_POR_NODO, ej: H200 → "0,1,2,3").
         // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario; playground nunca
         document.getElementById("opt-home").checked =
           selType !== "python" && !esPg;
       }
-      function updateGpuSelect() {
-        selGpu = document.getElementById("opt-gpu").checked;
-        const wrap = document.getElementById("gpu-select-wrap");
-        wrap.style.display = selGpu ? "flex" : "none";
-        if (!selGpu) {
-          // al apagar GPU, resetea la selección a "Todas"
-          const chips = wrap.querySelectorAll(".chip");
-          chips.forEach((c) => c.classList.remove("on"));
-          if (chips[0]) chips[0].classList.add("on");
-        }
-      }
       async function launch() {
         try {
+          const esDev = (auth() || {}).role === "dev";
           const body = {
             catalog_id: selType,
             mount_home:
@@ -1876,10 +1970,35 @@
           if (selectHostChecked()) body.node_name = selNode; // si no: k3s asigna por balanceo
           const pw = (document.getElementById("opt-pass").value || "").trim();
           if (pw) body.password = pw;
-          if (document.getElementById("opt-gpu").checked) {
-            body.gpu = true;
-            const v = gpuIndexSel();
-            body.gpu_index = v === "" ? null : parseInt(v);
+          if (document.getElementById("opt-gpu").checked) body.gpu = true;
+          // shm-size avanzado (vacío = default 45g del backend)
+          const shm = (document.getElementById("opt-shm").value || "").trim();
+          if (shm) body.shm_size = shm;
+          // Volúmenes extra (solo devs)
+          if (esDev) {
+            const vols = [
+              ...document.querySelectorAll("#vols-list .vol-path"),
+            ]
+              .map((inp) => {
+                const row = inp.closest("div");
+                return {
+                  path: (inp.value || "").trim(),
+                  ro:
+                    (row.querySelector(".vol-mode") || {}).value === "ro",
+                };
+              })
+              .filter((v) => v.path);
+            if (vols.length) body.volumes = vols;
+          }
+          // Paso 4 (devs): crear el entorno para otro usuario
+          if (esDev && selType !== "playground") {
+            const checked = document.querySelector(
+              'input[name="para-r"]:checked',
+            );
+            const u = (
+              document.getElementById("opt-para-user").value || ""
+            ).trim();
+            if (checked && checked.value === "otro" && u) body.para = u;
           }
           const env = await api("/envs", {
             method: "POST",
