@@ -38,6 +38,10 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
     if node:
         # Host elegido por el usuario; si no, k3s lo asigna (balanceo nativo)
         pod_spec["nodeSelector"] = {"kubernetes.io/hostname": node}
+        # Toleración solo para hosts dedicados con taint k3slab (ej: DGX2 de producción).
+        # El balanceo automático (sin nodeSelector) nunca aterriza en nodos con taint.
+        pod_spec["tolerations"] = [{"key": "k3slab/dedicated", "operator": "Exists",
+                                    "effect": "NoSchedule"}]
 
     # Variables de entorno del catálogo
     # (colab: el token lo genera la propia imagen y se lee de su log — ver api.py /connect)

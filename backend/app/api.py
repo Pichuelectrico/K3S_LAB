@@ -28,7 +28,17 @@ def usuario_actual(authorization: str | None = Header(None), db=Depends(get_db))
         raise HTTPException(401, "Token inválido o expirado")
     user = db.get(User, data["sub"])
     if not user:
-        raise HTTPException(401, "Usuario no existe")
+        # Usuario real de los nodos: su identidad ya fue verificada por PAM al
+        # emitir el token, así que se registra en la BD al primer request.
+        # El password_hash vacío es placeholder (verify_password -> False): el
+        # login de este usuario siempre pasa por PAM o por el fallback con hash.
+        user = User(username=data["sub"], password_hash="")
+        db.add(user)
+        try:
+            db.commit()
+        except Exception:  # noqa: BLE001 - carrera con otro request simultáneo
+            db.rollback()
+            user = db.get(User, data["sub"]) or user
     # Última actividad en la plataforma (para 'Conexiones activas en k3slab');
     # throttled: máximo 1 write/min por usuario
     try:
