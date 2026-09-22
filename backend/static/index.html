@@ -1846,7 +1846,7 @@
     <div class="node-card" onclick="pickNode('${n.name}', this)">
       <div style="display:flex;justify-content:space-between"><b>${n.name}</b>
         <span class="muted">${n.tier || ""} ${n.status === "Ready" ? "" : "· ⚠️ " + n.status}</span></div>
-      <p class="muted">${n.gpu_model ? "GPU " + n.gpu_model + " (" + n.vram_gb + ") · " + n.gpu_count + " GPU(s)" : "sin GPU"} · ${n.envs_activos} entornos activos</p>
+      <p class="muted">${n.gpu_count > 0 ? (n.gpu_model ? "GPU " + n.gpu_model + " (" + n.vram_gb + ") · " + n.gpu_count + " GPU(s)" : n.gpu_count + " GPU(s)") : "sin GPU"} · ${n.envs_activos} entornos activos</p>
       <p class="muted">CPU ${n.cpu_used}m / ${n.cpu_total} cores</p>
       <div class="bar"><i class="${cls(cpuPct)}" style="width:${cpuPct}%"></i></div>
       <p class="muted">RAM ${n.mem_used} Mi / ${n.mem_total}</p>
