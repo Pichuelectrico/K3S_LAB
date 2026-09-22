@@ -1795,7 +1795,8 @@
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${ICONS[c.id] || ICONS.colab || ""}<b>${c.name}</b>${c.id === "playground" ? '<span class="badge dev">DEV</span>' : ""}</div>
       <p class="muted" style="margin-top:6px">${c.description}</p>
-      <p class="muted">CPU ${c.cpu} · RAM ${c.mem}${c.ports.length ? " · puerto " + c.ports[0] : ""} · acceso ${c.access}</p>
+      <p class="muted" title="Reserva mínima garantizada en el nodo: los entornos pueden usar toda la CPU/RAM libre restante del equipo (sin tope duro)">
+        CPU ${c.cpu} · RAM ${c.mem} (reserva)${c.ports.length ? " · puerto " + c.ports[0] : ""} · acceso ${c.access}</p>
     </div>`,
           )
           .join("");

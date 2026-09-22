@@ -4,26 +4,15 @@ Convenciones (ver CONTEXT.md §4):
 - Labels: k3slab/managed=yes · k3slab/owner=<usuario> · k3slab/type=<tipo> · k3slab/env=<nombre>
 - Pods GPU (colab): runtimeClassName nvidia + hostPID true (paridad con --pid=host actual)
 - Mounts colab: /media ro, /mnt ro, /home/<owner> en /home/workdir + /dev/shm en memoria
-  (shm_size, default 45g — el LIMIT de memoria sube a shm+margen para que sea real)
+  (shm_size, default 45g — sin limit de memoria el tmpfs coge el sizeLimit directo)
 - NodePort del rango propio 31000-31999 (reemplaza el "baile de puertos" manual)
 """
 import hashlib
 import json
-import re
 
 import yaml
 
 from . import config
-
-
-def _mem_bytes(q: str) -> int:
-    """Parsea una cantidad de memoria k8s ("8Gi", "512Mi", "45G") a bytes."""
-    m = re.fullmatch(r"(\d+)([KMGT]?i?)", (q or "").strip())
-    if not m:
-        return 0
-    mult = {"": 1, "K": 10**3, "Ki": 2**10, "M": 10**6, "Mi": 2**20,
-            "G": 10**9, "Gi": 2**30, "T": 10**12, "Ti": 2**40}[m.group(2)]
-    return int(m.group(1)) * mult
 
 
 def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
@@ -37,31 +26,27 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
     el default; python/vscode también pueden pedirla) — el nodo expone todas sus GPUs
     o el subconjunto de config.GPU_VISIBLE_POR_NODO (futuro H200: "0,1,2,3").
     mount_home: montar el /home del owner en el contenedor (toggle en Recursos).
-    shm_size: sizeLimit del /dev/shm en memoria (colab/matlab/python; default 45Gi).
-    OJO: el kubelet dimensiona el tmpfs al min(sizeLimit, memory LIMIT) del pod →
-    cuando shm > mem del catálogo subimos el LIMIT (nunca el request, para no
-    reservar el nodo entero: comportamiento tipo docker --shm-size con burst).
+    shm_size: sizeLimit del /dev/shm en memoria (colab/matlab/python; default 45Gi) —
+    sin limit de memoria el kubelet dimensiona el tmpfs directo al sizeLimit.
     extra_volumes: volúmenes extra (solo devs) [{path: str, ro: bool}] — hostPath del
     nodo montado en el MISMO path dentro del pod."""
     labels = {"k3slab/managed": "yes", "k3slab/owner": owner,
               "k3slab/type": cat.id, "k3slab/env": name}
 
-    # shm en memoria (colab/matlab/python): LIMIT de memoria >= shm + 2Gi de margen
-    # (el tmpfs cobra sus páginas al cgroup del pod); el REQUEST queda del catálogo.
+    # /dev/shm en memoria aplica a colab/matlab/python (volumes/mounts más abajo)
     aplica_shm = cat.id in ("colab", "matlab", "python")
-    mem_limit = cat.mem
-    if aplica_shm:
-        want = _mem_bytes(shm_size) + 2 * 2**30
-        if _mem_bytes(cat.mem) < want:
-            mem_limit = f"{(want + 2**30 - 1) // 2**30}Gi"
 
     pod_spec: dict = {
         "containers": [{
             "name": "main",
             "image": cat.image,
-            # request del catálogo (scheduler); limit = cat.mem o shm+margen si aplica
-            "resources": {"requests": {"cpu": cat.cpu, "memory": cat.mem},
-                          "limits": {"cpu": cat.cpu, "memory": mem_limit}},
+            # SOLO requests (sin limits): el pod garantiza cpu/mem del catálogo en el
+            # scheduler (reserva mínima, lo que muestra la UI) pero puede usar TODA la
+            # RAM/CPU libre del nodo — burst tipo docker sin límites. Si el nodo se
+            # queda sin memoria el kernel mata primero al proceso más grande del pod
+            # que más excedió su request (oom_score_adj alto), y el kubelet expulsa
+            # (evict) primero los pods por encima de su request. Pide GPU = tolera taint.
+            "resources": {"requests": {"cpu": cat.cpu, "memory": cat.mem}},
         }],
     }
     if node:
