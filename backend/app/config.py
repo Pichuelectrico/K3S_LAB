@@ -76,3 +76,10 @@ HOST_NAMES = {
     "172.21.230.12": "DGX2",
 }
 HOST_ORDER = ["wslab01", "wslab02", "wslab03", "A100", "H200", "DGX", "DGX2"]
+
+# Nombre-nodo-k3s → nombre-host (el dcgm-exporter reporta por host; cuando un
+# host también es agente k3s con nombre distinto, se mapea aquí para que el
+# gpu_count del selector de nodos lo encuentre)
+NODE_HOST_ALIAS = {
+    "dgx2-station": "DGX2",
+}

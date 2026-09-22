@@ -174,7 +174,10 @@ def nodos(db=Depends(get_db)):
             "mem_total_mi": k8s._to_mi(spec.get("mem_total") or "") if spec.get("mem_total") else 0,
             "gpu_model": spec["gpu_model"],
             "vram_gb": spec["vram_gb"],
-            "gpu_count": gpu_counts.get(name, 0),
+            # El dcgm-exporter reporta por HOST (ej: "DGX2"); cuando el host es
+            # agente k3s con otro nombre (dgx2-station) resolvemos el alias
+            "gpu_count": gpu_counts.get(name)
+            or gpu_counts.get(config.NODE_HOST_ALIAS.get(name, name), 0),
             "tier": spec["tier"],
             "envs_activos": activos,
         })
