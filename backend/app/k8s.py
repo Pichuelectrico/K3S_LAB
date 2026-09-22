@@ -202,3 +202,31 @@ def uid_gid_en_nodo(owner: str, node: str) -> tuple[int | None, int | None]:
         return uid, gid
     except Exception:
         return None, None
+
+
+def asegurar_usuario_nodo(user: str, node: str) -> tuple[int | None, int | None]:
+    """Garantiza que el usuario exista en el nodo (lo crea con useradd si falta —
+    uid/gid auto-asignados por ESE nodo) y que su home exista con el dueño correcto.
+    Devuelve (uid, gid) del usuario EN ese nodo, o (None, None) si falla el SSH.
+    Necesario: los students no existen en todos los nodos y los UIDs difieren por
+    nodo (pre-Ansible); los pods vscode corren con su uid y crashean con EACCES
+    (permission denied, mkdir '/home/...') si el home montado no es suyo."""
+    import subprocess as _sp
+    from . import config as _config
+    host = f"{_config.SSH_USER}@{_config.NODE_IPS.get(node.lower(), node)}"
+    script = (
+        f"if ! id {user} >/dev/null 2>&1; then sudo -n useradd -s /bin/bash -m {user}; fi; "
+        f"U=$(id -u {user} 2>/dev/null) || exit 0; G=$(id -g {user}); "
+        f"sudo -n mkdir -p /home/{user}; "
+        f"[ \"$(stat -c %u /home/{user})\" = \"$U\" ] || sudo -n chown -R $U:$G /home/{user}; "
+        f"echo \"$U $G\""
+    )
+    try:
+        r = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host,
+                     script], capture_output=True, text=True, timeout=30)
+        out = (r.stdout or "").strip().split()
+        if r.returncode == 0 and len(out) >= 2 and out[0].isdigit():
+            return int(out[0]), int(out[1])
+        return None, None
+    except Exception:
+        return None, None

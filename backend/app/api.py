@@ -377,6 +377,22 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
             env.node = real
             db.commit()
 
+    # Asegurar el usuario + home en el nodo REAL: los students pueden no existir
+    # allí y los UIDs difieren por nodo (pre-Ansible) — el vscode corre con el uid
+    # del nodo de referencia y crashea con EACCES si el home no es suyo (ocurrió
+    # con csantamaria: uid 1048 en wslab01, no existe en wslab03). Si el uid local
+    # difiere del usado en el primer apply, re-aplicamos el manifest con el uid local.
+    if cat.id == "vscode" and mount_home and env.node:
+        local_uid, local_gid = k8s.asegurar_usuario_nodo(env.owner, env.node)
+        if local_uid and local_uid != (uid or -1):
+            yaml_str = manifests.build_manifests(
+                env.name, env.owner, env.node, nodeport, cat,
+                uid=local_uid, gid=local_gid, gpu=wants_gpu,
+                mount_home=mount_home, password=env.password,
+                shm_size=shm_size or "45Gi", mem_limit=mem_limit,
+                extra_volumes=vols_extra)
+            k8s.apply_yaml(yaml_str)
+
     db.add(ActivityLog(env_id=env.id, username=user.username, action="create"))
     db.commit()
     return _env_a_json(env, nodeport)
