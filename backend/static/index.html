@@ -1981,6 +1981,7 @@
       }
       /* Panel dev: actividad con búsqueda y filtros (usuario / nodo / tipo / estado) */
       let _actData = { sesiones: [], entornos: [] };
+      let _actWebFiltro = "1h"; // recencia de "Conexiones en k3slab": 1h (default) o todos
       async function loadActivity() {
         try {
           _actData = await api("/admin/activity");
@@ -2052,13 +2053,21 @@
             match(e.owner + " " + e.name + " " + (e.node || "") + " " + e.type),
         );
         let html = "";
-        // Conexiones activas en la PLATAFORMA (logins web; activa = actividad en los últimos 15 min)
+        // Conexiones en la PLATAFORMA (logins web; activa = actividad en los últimos 15 min).
+        // Filtro de recencia: "1h" = última actividad hasta 1h atrás (default), "todos" = todos
+        // los usuarios que alguna vez iniciaron sesión.
+        const corte1h = Date.now() - 3600 * 1000;
+        const enUltimaHora = (w) =>
+          !!w.last_seen && new Date(w.last_seen + "Z").getTime() >= corte1h;
         const web = (_actData.web || []).filter(
-          (w) => (!fu || w.username === fu) && match(w.username),
+          (w) =>
+            (_actWebFiltro === "todos" || enUltimaHora(w)) &&
+            (!fu || w.username === fu) &&
+            match(w.username),
         );
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:13px">Conexiones activas en k3slab</b><span class="muted" style="font-size:12px">${web.filter((w) => w.activo).length} activa(s) en la plataforma</span></div>`;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:10px"><span style="display:flex;align-items:center;gap:8px"><b style="font-size:13px">Conexiones en k3slab</b><select id="act-web" onchange="_actWebFiltro=this.value;renderActivity()" style="width:auto;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:99px;padding:3px 11px;font-size:12px;height:26px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer"><option value="1h" ${_actWebFiltro === "1h" ? "selected" : ""}>Última hora</option><option value="todos" ${_actWebFiltro === "todos" ? "selected" : ""}>Todos</option></select></span><span class="muted" style="font-size:12px">${web.filter((w) => w.activo).length} activa(s) · ${web.length} en esta vista</span></div>`;
         html += !web.length
-          ? '<div class="muted">Nadie ha iniciado sesión en la plataforma.</div>'
+          ? `<div class="muted">${_actWebFiltro === "todos" ? "Nadie ha iniciado sesión en la plataforma." : "Nadie con actividad en la última hora."}</div>`
           : '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">' +
             '<tr style="text-align:left;opacity:.65"><th style="padding:4px 8px 4px 0">Usuario</th><th>Sesión iniciada</th><th>Última actividad</th><th>Estado</th></tr>' +
             web

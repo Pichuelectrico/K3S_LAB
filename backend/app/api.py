@@ -501,12 +501,13 @@ def servers(_=Depends(requiere_dev)):
 
 @router.get("/admin/activity")
 def actividad(_=Depends(requiere_dev)):
-    """Quién está conectado (sesiones SSH/consola con `w` en los 3 nodos del lab)
+    """Quién está conectado (sesiones SSH/consola con `w` en los nodos del lab)
     y qué entornos están corriendo (estado real del clúster), para el panel de devs."""
-    # 1. Sesiones en vivo por nodo (la producción NO se toca) + salida cruda de `who`
+    # 1. Sesiones en vivo por nodo (la producción NO se toca) + salida cruda de `who`.
+    # Se itera config.NODE_IPS para cubrir automáticamente cualquier nodo del lab.
     sesiones = []
     who_raw = []
-    for name in ("wslab01", "wslab02", "wslab03"):
+    for name in config.NODE_IPS:
         ip = config.NODE_IPS.get(name)
         if not ip:
             continue
@@ -555,13 +556,15 @@ def actividad(_=Depends(requiere_dev)):
                 "gpu": bool(env.gpu),
                 "shared": env.catalog_id == "playground",
             })
-    # 3. Sesiones en la plataforma (logins web): activas = actividad en los últimos 15 min
+    # 3. Sesiones en la plataforma (logins web): activas = actividad en los últimos 15 min.
+    # Se devuelven TODAS las filas (1 por usuario, PK username) para que el frontend
+    # filtre por recencia (última hora por defecto / todos).
     corte = dt.datetime.utcnow() - dt.timedelta(minutes=15)
     web = [{
         "username": s.username,
         "login_at": s.login_at.isoformat() if s.login_at else None,
         "last_seen": s.last_seen.isoformat() if s.last_seen else None,
         "activo": bool(s.last_seen and s.last_seen >= corte),
-    } for s in db.query(WebSesion).order_by(WebSesion.last_seen.desc()).limit(30).all()]
+    } for s in db.query(WebSesion).order_by(WebSesion.last_seen.desc()).limit(500).all()]
 
     return {"sesiones": sesiones, "entornos": entornos, "who_raw": who_raw, "web": web}
