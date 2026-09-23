@@ -15,6 +15,23 @@ import yaml
 from . import config
 
 
+def _con_como_usuario(owner: str, uid: int, gid: int | None, inner: str, home: str) -> str:
+    """Shell que arranca como root: registra al owner en /etc/passwd DEL CONTENEDOR
+    (si no existe) y baja privilegios a uid/gid con setpriv antes de ejecutar `inner`.
+    Sin entrada en /etc/passwd, whoami/$USER/terminales muestran "I have no name!"
+    (el uid real del nodo no existe en la imagen: coder/jovyan son uid 1000). El uid
+    se inserta PRIMERO en /etc/passwd para ganar los duplicados de uid. El contenedor
+    corre como root SOLO para escribir /etc/passwd; el proceso final corre como el
+    owner. Idempotente: en cada arranque del contenedor se re-registra."""
+    g = gid or uid
+    return (
+        f"N='{owner}'; U={uid}; G={g}; H='{home}'; "
+        'if ! getent passwd "$N" >/dev/null 2>&1; then '
+        'sed -i "1i ${N}:x:${U}:${G}::${H}:/bin/bash" /etc/passwd || true; fi; '
+        f"exec setpriv --reuid=$U --regid=$G --init-groups {inner}"
+    )
+
+
 def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
                     cat, uid: int | None = None, gid: int | None = None,
                     gpu: bool = False,
@@ -123,37 +140,54 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
             {"name": "HASHED_PASSWORD",
              "value": hashlib.sha256((password or config.VSCODE_PASSWORD).encode()).hexdigest()},
         ]
-        # El entrypoint del coder image hace bind localhost por defecto → override
-        pod_spec["containers"][0]["command"] = [
-            "code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password",
-        ]
+        # El entrypoint del coder image hace bind localhost por defecto → override.
+        # Con uid real: el contenedor arranca como root → wrapper registra al owner
+        # en /etc/passwd y baja a uid/gid con setpriv (code-server corre como el
+        # owner, con su nombre en terminales y $USER, no "I have no name!").
         if uid:
-            pod_spec["securityContext"] = {"runAsUser": uid, "runAsGroup": gid or uid,
-                                           "runAsNonRoot": True}
+            pod_spec["containers"][0]["command"] = [
+                "/bin/sh", "-ec",
+                _con_como_usuario(owner, uid, gid,
+                                  "code-server --bind-addr 0.0.0.0:8080 --auth password",
+                                  "/home/coder"),
+            ]
+        else:
+            pod_spec["containers"][0]["command"] = [
+                "code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password",
+            ]
     if cat.id == "jupyter":
         # JupyterLab (notebooks .ipynb nativos, sin extensiones de VS Code): el kernel
         # corre DENTRO del pod — cerrar el navegador NO detiene la ejecución; al volver,
         # el kernel sigue vivo con tus variables. Home del owner montado en /home/jovyan
-        # (home de la imagen jupyter/docker-stacks) con runAsUser/Group = uid/gid del
-        # owner (mismo patrón que vscode) para que los .ipynb queden en su home real
+        # (home de la imagen jupyter/docker-stacks) y el proceso corre con el uid/gid
+        # del owner (mismo patrón que vscode) para que los .ipynb queden en su home real
         # con dueño correcto y persistan si el pod se recrea.
         # jupyter lab directo (sin start-notebook.py de la imagen, que asume jovyan
-        # uid 1000): token fijo del entorno, root_dir en el home montado y --allow-root
-        # por si el uid no se resolvió y corre como root.
+        # uid 1000): token fijo del entorno y root_dir en el home montado.
         if mount_home:
             volumes += [
                 {"name": "home", "hostPath": {"path": f"/home/{owner}", "type": "DirectoryOrCreate"}},
             ]
             mounts += [{"name": "home", "mountPath": "/home/jovyan"}]
         envs += [{"name": "HOME", "value": "/home/jovyan"}]
-        pod_spec["containers"][0]["command"] = [
-            "jupyter", "lab", "--no-browser", "--ip=0.0.0.0", "--port=8888",
-            "--ServerApp.root_dir=/home/jovyan", "--allow-root",
-            f"--IdentityProvider.token={password or config.JUPYTER_PASSWORD}",
-        ]
+        # Con uid real: contenedor arranca como root → wrapper registra al owner en
+        # /etc/passwd y baja a uid/gid con setpriv (jupyter corre como el owner, con
+        # su nombre en terminales y $USER, no "I have no name!"). Sin uid (fallback)
+        # corre como root → --allow-root.
+        tok = (password or config.JUPYTER_PASSWORD).replace("'", "'\\''")
         if uid:
-            pod_spec["securityContext"] = {"runAsUser": uid, "runAsGroup": gid or uid,
-                                           "runAsNonRoot": True}
+            jcmd = ("jupyter lab --no-browser --ip=0.0.0.0 --port=8888 "
+                    "--ServerApp.root_dir=/home/jovyan "
+                    f"--IdentityProvider.token='{tok}'")
+            pod_spec["containers"][0]["command"] = [
+                "/bin/sh", "-ec", _con_como_usuario(owner, uid, gid, jcmd, "/home/jovyan"),
+            ]
+        else:
+            pod_spec["containers"][0]["command"] = [
+                "jupyter", "lab", "--no-browser", "--ip=0.0.0.0", "--port=8888",
+                "--ServerApp.root_dir=/home/jovyan", "--allow-root",
+                f"--IdentityProvider.token={tok}",
+            ]
     if cat.id == "matlab":
         # MATLAB: VNC 5901 + noVNC 6080 (acceso browser). El image matlab entra como
         # usuario "matlab" vinculado al uid del host → conflictos; correr como root
