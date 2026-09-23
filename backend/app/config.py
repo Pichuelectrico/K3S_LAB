@@ -42,7 +42,8 @@ IDLE_STOP_DAYS = int(os.getenv("K3SLAB_IDLE_STOP_DAYS", "7"))     # sin uso → 
 IDLE_DELETE_DAYS = int(os.getenv("K3SLAB_IDLE_DELETE_DAYS", "90"))  # sin uso → eliminar
 SCHEDULER_INTERVAL_S = int(os.getenv("K3SLAB_SCHEDULER_INTERVAL_S", "60"))  # MVP: 60s
 
-# Cuotas
+# Cuota: máximo de entornos activos POR TIPO por student — uno de cada uno
+# (1 vscode + 1 jupyter + 1 matlab...); los devs sin límite en el MVP.
 MAX_ENVS_ACTIVOS_POR_STUDENT = int(os.getenv("K3SLAB_MAX_ENVS_STUDENT", "1"))
 
 # GPUs visibles por nodo (NVIDIA_VISIBLE_DEVICES del runtime NVIDIA): mecanismo

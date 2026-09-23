@@ -328,13 +328,16 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
         vistos.add(p)
         vols_extra.append({"path": p, "ro": bool(v.get("ro"))})
 
-    # Cuota: 1 entorno activo por student (los devs sin límite en el MVP);
-    # crear el playground no cuenta para la cuota del dev
+    # Cuota: 1 entorno activo de CADA tipo por student (los devs sin límite en el MVP);
+    # el playground nunca se cuenta. Pueden tener 1 vscode + 1 jupyter + 1 matlab...
     if role != "dev" and not es_pg:
         activos = db.query(Env).filter(
-            Env.owner == user.username, Env.status == "running").count()
+            Env.owner == user.username, Env.catalog_id == cat.id,
+            Env.status == "running").count()
         if activos >= config.MAX_ENVS_ACTIVOS_POR_STUDENT:
-            raise HTTPException(429, "Ya tienes un entorno activo. Detenlo o elimínalo primero.")
+            raise HTTPException(
+                429, f"Ya tienes un entorno {cat.name} activo — se permite uno de cada "
+                     "tipo. Detenlo o elimínalo primero.")
 
     # NodePort libre del rango propio
     ocupados = k8s.get_nodeports_en_uso()
