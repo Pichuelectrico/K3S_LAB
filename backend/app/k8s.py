@@ -8,9 +8,11 @@ from . import config
 
 
 def kubectl(args: str, input_data: str | None = None) -> tuple[bool, str]:
-    """Ejecuta `ssh WsLab01 'k3s kubectl <args>'`. Devuelve (ok, salida)."""
+    """Ejecuta `ssh {config.K3S_SSH_HOST} 'k3s kubectl <args>'`. Devuelve (ok, salida)."""
     cmd = [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-i", config.SSH_KEY,
         config.K3S_SSH_HOST,
         f"{config.KUBECTL_CMD} {args}",
     ]
@@ -193,11 +195,13 @@ def uid_gid_en_nodo(owner: str, node: str) -> tuple[int | None, int | None]:
     from . import config as _config
     host = f"{_config.SSH_USER}@{_config.NODE_IPS.get(node.lower(), node)}"
     try:
-        r = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host,
-                     f"id -u {owner}"], capture_output=True, text=True, timeout=10)
+        r = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+                     "-o", "StrictHostKeyChecking=accept-new", "-i", _config.SSH_KEY,
+                     host, f"id -u {owner}"], capture_output=True, text=True, timeout=10)
         uid = int(r.stdout.strip()) if r.returncode == 0 else None
-        r2 = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host,
-                      f"id -g {owner}"], capture_output=True, text=True, timeout=10)
+        r2 = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+                      "-o", "StrictHostKeyChecking=accept-new", "-i", _config.SSH_KEY,
+                      host, f"id -g {owner}"], capture_output=True, text=True, timeout=10)
         gid = int(r2.stdout.strip()) if r2.returncode == 0 else None
         return uid, gid
     except Exception:
@@ -222,8 +226,9 @@ def asegurar_usuario_nodo(user: str, node: str) -> tuple[int | None, int | None]
         f"echo \"$U $G\""
     )
     try:
-        r = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host,
-                     script], capture_output=True, text=True, timeout=30)
+        r = _sp.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+                     "-o", "StrictHostKeyChecking=accept-new", "-i", _config.SSH_KEY,
+                     host, script], capture_output=True, text=True, timeout=30)
         out = (r.stdout or "").strip().split()
         if r.returncode == 0 and len(out) >= 2 and out[0].isdigit():
             return int(out[0]), int(out[1])

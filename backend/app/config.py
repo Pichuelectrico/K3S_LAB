@@ -20,7 +20,8 @@ else:
         f.write(JWT_SECRET)
 
 # kubectl se ejecuta vía SSH al nodo cabeza (k3s kubectl, kubeconfig 644 → sin sudo)
-K3S_SSH_HOST = os.getenv("K3S_SSH_HOST", "WsLab01")
+# Head node por user@IP (k3slab) — resuelve igual desde la Mac o desde wslab01
+K3S_SSH_HOST = os.getenv("K3S_SSH_HOST", "k3slab@172.21.230.21")
 KUBECTL_CMD = os.getenv("K3S_KUBECTL_CMD", "k3s kubectl")
 KUBECTL_TIMEOUT = int(os.getenv("K3S_KUBECTL_TIMEOUT", "30"))
 
@@ -58,8 +59,10 @@ VSCODE_PASSWORD = os.getenv("K3SLAB_VSCODE_PASSWORD", "k3slab")
 # Contraseña noVNC de MATLAB en el MVP (su flujo usaba PASSWORD env)
 MATLAB_PASSWORD = os.getenv("K3SLAB_MATLAB_PASSWORD", "k3slab")
 
-# Usuario admin para SSH directo a los nodos (dueño de la key del lab)
-SSH_USER = os.getenv("K3SLAB_SSH_USER", "jreinosoc")
+# Usuario de servicio para SSH directo a los nodos (key sin passphrase en ambos lados:
+# la Mac y /home/k3slab en wslab01 donde corre el backend)
+SSH_USER = os.getenv("K3SLAB_SSH_USER", "k3slab")
+SSH_KEY = os.getenv("K3SLAB_SSH_KEY", os.path.expanduser("~/.ssh/id_k3s_lab_service"))
 
 # Monitoreo (Prometheus del lab — el de GMED corre en :9393, no usar)
 PROM_URL = os.getenv("K3SLAB_PROM_URL", "http://172.21.230.10:9090")

@@ -23,6 +23,8 @@ def verify_password(plain: str, hashed: str) -> bool:
 def _ssh_cmd(host_ip: str, cmd: str, timeout: int = 10):
     return subprocess.run(
         ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
+         "-o", "StrictHostKeyChecking=accept-new",
+         "-i", config.SSH_KEY,
          f"{config.SSH_USER}@{host_ip}", cmd],
         capture_output=True, text=True, timeout=timeout,
     )
