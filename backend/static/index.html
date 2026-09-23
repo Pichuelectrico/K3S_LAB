@@ -1985,6 +1985,7 @@
           "colab",
           "python",
           "vscode",
+          "jupyter",
           "matlab",
           "playground",
         ];
@@ -2030,7 +2031,7 @@
         }
         // GPU todo-o-nada: el backend decide el NVIDIA_VISIBLE_DEVICES según el nodo
         // (todas o el subconjunto de GPU_VISIBLE_POR_NODO, ej: H200 → "0,1,2,3").
-        // Montar /home: ON por defecto para colab/vscode/matlab; python lo activa el usuario; playground nunca
+        // Montar /home: ON por defecto para colab/vscode/jupyter/matlab; python lo activa el usuario; playground nunca
         document.getElementById("opt-home").checked =
           selType !== "python" && !esPg;
       }

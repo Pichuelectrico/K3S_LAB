@@ -39,7 +39,7 @@ def startup():
          "python:3.12", "2", "4Gi", False, "", "console", ""),
         ("jupyter", "JupyterLab",
          "Notebooks .ipynb nativos (sin extensiones de VS Code) — el kernel corre en el pod: la ejecución sigue aunque cierres el navegador",
-         "quay.io/jupyter/scipy-notebook:latest", "2", "4Gi", False, "8888", "web", ""),
+         "quay.io/jupyter/pytorch-notebook:latest", "2", "4Gi", False, "8888", "web", ""),
         ("playground", "Playground · Colab",
          "Notebook Colab COMPARTIDO para todos los estudiantes (sin home) — solo lo crean los devs",
          "us-docker.pkg.dev/colab-images/public/runtime:latest", "2", "8Gi", True,
