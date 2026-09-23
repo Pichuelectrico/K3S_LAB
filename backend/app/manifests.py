@@ -145,6 +145,9 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         # en /etc/passwd y baja a uid/gid con setpriv (code-server corre como el
         # owner, con su nombre en terminales y $USER, no "I have no name!").
         if uid:
+            # La imagen define USER coder (1000) → forzar arranque como root para
+            # poder escribir /etc/passwd; el wrapper baja a uid/gid con setpriv.
+            pod_spec["containers"][0]["securityContext"] = {"runAsUser": 0}
             pod_spec["containers"][0]["command"] = [
                 "/bin/sh", "-ec",
                 _con_como_usuario(owner, uid, gid,
@@ -176,6 +179,9 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         # corre como root → --allow-root.
         tok = (password or config.JUPYTER_PASSWORD).replace("'", "'\\''")
         if uid:
+            # La imagen define USER jovyan (1000) → forzar arranque como root para
+            # poder escribir /etc/passwd; el wrapper baja a uid/gid con setpriv.
+            pod_spec["containers"][0]["securityContext"] = {"runAsUser": 0}
             jcmd = ("jupyter lab --no-browser --ip=0.0.0.0 --port=8888 "
                     "--ServerApp.root_dir=/home/jovyan "
                     f"--IdentityProvider.token='{tok}'")
