@@ -15,9 +15,11 @@ import yaml
 from . import config
 
 
-def _con_como_usuario(owner: str, uid: int, gid: int | None, inner: str, home: str) -> str:
+def _con_como_usuario(owner: str, uid: int, gid: int | None, inner: str, home: str,
+                      pre_root: str = "") -> str:
     """Shell que arranca como root: registra al owner en /etc/passwd DEL CONTENEDOR
-    (si no existe) y baja privilegios a uid/gid con setpriv antes de ejecutar `inner`.
+    (si no existe), ejecuta `pre_root` (extras como root, ej. chown de /opt/conda)
+    y baja privilegios a uid/gid con setpriv antes de ejecutar `inner`.
     Sin entrada en /etc/passwd, whoami/$USER/terminales muestran "I have no name!"
     (el uid real del nodo no existe en la imagen: coder/jovyan son uid 1000). El uid
     se inserta PRIMERO en /etc/passwd para ganar los duplicados de uid. El contenedor
@@ -26,7 +28,8 @@ def _con_como_usuario(owner: str, uid: int, gid: int | None, inner: str, home: s
     g = gid or uid
     return (
         f"N='{owner}'; U={uid}; G={g}; H='{home}'; "
-        'if ! getent passwd "$N" >/dev/null 2>&1; then '
+        + (pre_root if pre_root else "")
+        + 'if ! getent passwd "$N" >/dev/null 2>&1; then '
         'sed -i "1i ${N}:x:${U}:${G}::${H}:/bin/bash" /etc/passwd || true; fi; '
         f"exec setpriv --reuid=$U --regid=$G --init-groups {inner}"
     )
@@ -185,8 +188,13 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
             jcmd = ("jupyter lab --no-browser --ip=0.0.0.0 --port=8888 "
                     "--ServerApp.root_dir=/home/jovyan "
                     f"--IdentityProvider.token='{tok}'")
+            # /opt/conda pertenece a jovyan (1000) en la imagen → con uid real,
+            # conda/pip no pueden escribir (EnvironmentNotWritableError). Tomar
+            # propiedad al arrancar (solo la primera vez de cada contenedor; el
+            # writable layer persiste entre restarts). ~10-60s con pytorch-notebook.
+            pre = 'if [ "$(stat -c %u /opt/conda)" != "$U" ]; then chown -R "$U":"$G" /opt/conda || true; fi; '
             pod_spec["containers"][0]["command"] = [
-                "/bin/sh", "-ec", _con_como_usuario(owner, uid, gid, jcmd, "/home/jovyan"),
+                "/bin/sh", "-ec", _con_como_usuario(owner, uid, gid, jcmd, "/home/jovyan", pre),
             ]
         else:
             pod_spec["containers"][0]["command"] = [
