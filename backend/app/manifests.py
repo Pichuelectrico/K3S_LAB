@@ -191,8 +191,10 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
             # /opt/conda pertenece a jovyan (1000) en la imagen → con uid real,
             # conda/pip no pueden escribir (EnvironmentNotWritableError). Tomar
             # propiedad al arrancar (solo la primera vez de cada contenedor; el
-            # writable layer persiste entre restarts). ~10-60s con pytorch-notebook.
-            pre = 'if [ "$(stat -c %u /opt/conda)" != "$U" ]; then chown -R "$U":"$G" /opt/conda || true; fi; '
+            # writable layer persiste entre restarts). Paralelo con xargs -P 8:
+            # ~15-30s vs ~2min del chown -R secuencial sobre pytorch-notebook.
+            pre = ('if [ "$(stat -c %u /opt/conda)" != "$U" ]; then '
+                   'find /opt/conda -xdev -print0 2>/dev/null | xargs -0 -r -P 8 -n 500 chown "$U":"$G" >/dev/null 2>&1; fi; ')
             pod_spec["containers"][0]["command"] = [
                 "/bin/sh", "-ec", _con_como_usuario(owner, uid, gid, jcmd, "/home/jovyan", pre),
             ]
