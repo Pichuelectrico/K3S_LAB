@@ -1654,6 +1654,7 @@
           ${!soloConectar ? `<button class="danger" onclick="del(${e.id},'${e.name}')">Eliminar</button>` : ""}
         </div>
         ${e.type === "vscode" ? `<div class="muted" style="font-size:11px;margin-top:6px">password del IDE: <b>${e.password || "k3slab"}</b>${e.password ? "" : " (default)"}</div>` : ""}
+        ${e.type === "jupyter" ? `<div class="muted" style="font-size:11px;margin-top:6px">token de JupyterLab: <b>${e.password || "k3slab"}</b>${e.password ? "" : " (default)"} · la URL ya lo lleva (?token=) · el kernel sigue corriendo aunque cierres el navegador</div>` : ""}
         ${e.type === "matlab" ? `<div class="muted" style="font-size:11px;margin-top:6px">password VNC: <b>${e.password || "k3slab"}</b>${e.password ? "" : " (default)"} · acceso directo por NodePort (igual que VS Code) · escritorio tarda ~1 min en arrancar</div>` : ""}
         ${e.shared && !esDev ? `<div class="muted" style="font-size:11px;margin-top:6px">Playground compartido: úsalo con cuidado — detener/eliminar es de los devs</div>` : ""}
       </div>`;
@@ -1720,6 +1721,19 @@
               "Fuera de la red del lab usa el port-forward: lanza el comando SSH de arriba, deja la ventana abierta y abre " +
               c.local_url +
               ". El escritorio tarda ~1 min en arrancar la primera vez.";
+          } else if (c.tipo === "jupyter") {
+            title.textContent = c.shared ? "JupyterLab (compartido)" : "JupyterLab · entorno propio";
+            urlRow.style.display = "block";
+            urlCopy.style.display = "flex";
+            urlRow.textContent = "URL directa (NodePort con el token incluido — ábrela y entra solo):";
+            document.getElementById("c-url").textContent =
+              c.node_url || "(espera a que el pod termine de arrancar)";
+            passLbl.style.display = "block";
+            passRow.style.display = "flex";
+            passLbl.textContent = "Token de JupyterLab (ya va en la URL, por si lo pide):";
+            document.getElementById("c-pass").textContent = c.password;
+            note.textContent =
+              "La vista de notebooks es nativa de JupyterLab (sin extensiones de VS Code). El kernel corre EN EL POD: cierra la pestaña y la ejecución sigue; al volver, el kernel sigue vivo con tus variables.";
           } else {
             title.textContent = c.shared
               ? "Playground · Colab (compartido)"
@@ -1985,17 +1999,21 @@
         const esDev = (auth() || {}).role === "dev";
         // El playground es compartido: nunca monta home y no usa contraseña
         document.getElementById("res-home").style.display = esPg ? "none" : "";
-        // Contraseña configurable para vscode/matlab (vacío = default k3slab)
-        const showPass = selType === "vscode" || selType === "matlab";
+        // Contraseña configurable para vscode/matlab/jupyter (vacío = default k3slab)
+        const showPass =
+          selType === "vscode" || selType === "matlab" || selType === "jupyter";
         document.getElementById("res-pass").style.display = showPass
           ? ""
           : "none";
         if (!showPass) document.getElementById("opt-pass").value = "";
         // Avanzadas (solo devs): RAM límite (todos los tipos) + SHM (colab/matlab/
-        // python, los únicos que montan /dev/shm) + volúmenes extra (nunca playground)
+        // python/jupyter, los únicos que montan /dev/shm) + volúmenes extra (nunca playground)
         document.getElementById("adv-wrap").style.display = esDev ? "" : "none";
         const showShm =
-          selType === "colab" || selType === "matlab" || selType === "python";
+          selType === "colab" ||
+          selType === "matlab" ||
+          selType === "python" ||
+          selType === "jupyter";
         document.getElementById("res-shm").style.display = showShm ? "" : "none";
         document.getElementById("adv-vols").style.display =
           esDev && !esPg ? "" : "none";
@@ -2124,7 +2142,7 @@
             (e) => `<tr>
       <td>${e.owner}</td><td>${e.name}</td><td>${e.type}</td><td>${e.node}</td>
       <td><span class="badge ${e.status}">${e.status.toUpperCase()}</span></td>
-      <td>${e.type === "vscode" || e.type === "matlab" ? (e.password ? `<b>${e.password}</b>${e.password === "k3slab" ? ' <span class="muted">(default)</span>' : ""}` : '<span class="muted">k3slab (default)</span>') : "—"}</td>
+      <td>${e.type === "vscode" || e.type === "matlab" || e.type === "jupyter" ? (e.password ? `<b>${e.password}</b>${e.password === "k3slab" ? ' <span class="muted">(default)</span>' : ""}` : '<span class="muted">k3slab (default)</span>') : "—"}</td>
       <td>${e.nodeport || "—"}</td><td>${fmt(e.last_activity)}</td>
       <td>${e.type === "colab" || e.type === "playground" ? "(colab)" : e.url ? `<a href="${e.url}" target="_blank">abrir ↗</a>` : "—"}</td>
       <td>${e.status === "running" ? `<button onclick="act(${e.id},'stop')">Detener</button> ` : ""}

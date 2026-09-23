@@ -1,6 +1,7 @@
 """API del K3S Lab. Filtrado por rol SIEMPRE en el backend (nunca confiar en el frontend)."""
 import datetime as dt
 import json
+from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
@@ -199,13 +200,17 @@ def nodos(db=Depends(get_db)):
 # ---------- entornos ----------
 
 def _env_a_json(env: Env, nodeport: int | None) -> dict:
+    pass_efectiva = env.password or (
+        config.VSCODE_PASSWORD if env.catalog_id == "vscode"
+        else config.MATLAB_PASSWORD if env.catalog_id == "matlab"
+        else config.JUPYTER_PASSWORD if env.catalog_id == "jupyter" else None)
     url = None
     if nodeport:
         ip = config.NODE_IPS.get(env.node, env.node)
         url = f"http://{ip}:{nodeport}"
-    pass_efectiva = env.password or (
-        config.VSCODE_PASSWORD if env.catalog_id == "vscode"
-        else config.MATLAB_PASSWORD if env.catalog_id == "matlab" else None)
+        # JupyterLab: token prefill en la URL (login directo, sin copiar/pegar)
+        if env.catalog_id == "jupyter" and pass_efectiva:
+            url += f"/lab?token={quote_plus(pass_efectiva)}"
     return {
         "id": env.id, "name": env.name, "owner": env.owner, "node": env.node,
         "type": env.catalog_id, "status": env.status, "nodeport": nodeport,
@@ -352,9 +357,9 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     db.add(env)
     db.commit()
 
-    # Password configurable por el usuario (vscode/matlab); vacío → default del config
+    # Password configurable por el usuario (vscode/matlab/jupyter); vacío → default
     ent_password = (body.get("password") or "").strip() \
-        if cat.id in ("vscode", "matlab") else None
+        if cat.id in ("vscode", "matlab", "jupyter") else None
     if ent_password and len(ent_password) < 4:
         db.delete(env)
         db.commit()
@@ -362,11 +367,11 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     env.password = ent_password or None
     db.commit()
 
-    mount_home = bool(body.get("mount_home", cat.id in ("colab", "vscode", "matlab")))
+    mount_home = bool(body.get("mount_home", cat.id in ("colab", "vscode", "matlab", "jupyter")))
     if es_pg:
         mount_home = False  # el playground es compartido: nunca monta un home
     uid = gid = None
-    if cat.id == "vscode" and mount_home:
+    if cat.id in ("vscode", "jupyter") and mount_home:
         # Con host automático resolvemos el uid en wslab01 (fuente de verdad de las cuentas);
         # ojo: si los uids del usuario difieren entre nodos (usuarios pre-Ansible) y k3s
         # agenda en otro nodo, puede haber mismatch de permisos hasta unificar uids.
@@ -394,7 +399,7 @@ def crear_env(body: dict, user_role=Depends(usuario_actual), db=Depends(get_db))
     # del nodo de referencia y crashea con EACCES si el home no es suyo (ocurrió
     # con csantamaria: uid 1048 en wslab01, no existe en wslab03). Si el uid local
     # difiere del usado en el primer apply, re-aplicamos el manifest con el uid local.
-    if cat.id == "vscode" and mount_home and env.node:
+    if cat.id in ("vscode", "jupyter") and mount_home and env.node:
         local_uid, local_gid = k8s.asegurar_usuario_nodo(env.owner, env.node)
         if local_uid and local_uid != (uid or -1):
             yaml_str = manifests.build_manifests(
@@ -529,6 +534,24 @@ def conectar_env(env_id: int, user_role=Depends(usuario_actual), db=Depends(get_
                 "noVNC pedirá el password del escritorio VNC (abajo). El escritorio tarda ~1 min la primera vez; lanza MATLAB desde su icono.",
                 "Tu home del nodo está montado en /home.",
                 "Al terminar tu sesión, detén o elimina el entorno para liberar recursos.",
+            ],
+        }
+
+    if env.catalog_id == "jupyter":
+        # JupyterLab: NodePort directo con el token prefill en la URL (login automático)
+        if not env.nodeport:
+            raise HTTPException(400, "Este entorno no expone puertos")
+        token = env.password or config.JUPYTER_PASSWORD
+        return {
+            "tipo": "jupyter",
+            "node_url": f"http://{ip}:{env.nodeport}/lab?token={quote_plus(token)}",
+            "password": token,
+            "steps": [
+                f"Abre http://{ip}:{env.nodeport}/lab?token=… (NodePort directo, el token ya va en la URL — ábrela y entra solo).",
+                "La vista de notebooks es nativa de JupyterLab: no necesita extensiones ni VS Code.",
+                "El kernel corre EN EL POD: cierra la pestaña del navegador y la ejecución sigue; al volver, el kernel sigue vivo con tus variables.",
+                "Tu home del nodo está montado en /home/jovyan (los .ipynb quedan en tu home real).",
+                "Al terminar, detén o elimina el entorno para liberar recursos.",
             ],
         }
 

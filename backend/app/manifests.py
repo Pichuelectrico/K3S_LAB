@@ -37,7 +37,7 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
               "k3slab/type": cat.id, "k3slab/env": name}
 
     # /dev/shm en memoria aplica a colab/matlab/python (volumes/mounts más abajo)
-    aplica_shm = cat.id in ("colab", "matlab", "python")
+    aplica_shm = cat.id in ("colab", "matlab", "python", "jupyter")
 
     pod_spec: dict = {
         "containers": [{
@@ -126,6 +126,30 @@ def build_manifests(name: str, owner: str, node: str, nodeport: int | None,
         # El entrypoint del coder image hace bind localhost por defecto → override
         pod_spec["containers"][0]["command"] = [
             "code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password",
+        ]
+        if uid:
+            pod_spec["securityContext"] = {"runAsUser": uid, "runAsGroup": gid or uid,
+                                           "runAsNonRoot": True}
+    if cat.id == "jupyter":
+        # JupyterLab (notebooks .ipynb nativos, sin extensiones de VS Code): el kernel
+        # corre DENTRO del pod — cerrar el navegador NO detiene la ejecución; al volver,
+        # el kernel sigue vivo con tus variables. Home del owner montado en /home/jovyan
+        # (home de la imagen jupyter/docker-stacks) con runAsUser/Group = uid/gid del
+        # owner (mismo patrón que vscode) para que los .ipynb queden en su home real
+        # con dueño correcto y persistan si el pod se recrea.
+        # jupyter lab directo (sin start-notebook.py de la imagen, que asume jovyan
+        # uid 1000): token fijo del entorno, root_dir en el home montado y --allow-root
+        # por si el uid no se resolvió y corre como root.
+        if mount_home:
+            volumes += [
+                {"name": "home", "hostPath": {"path": f"/home/{owner}", "type": "DirectoryOrCreate"}},
+            ]
+            mounts += [{"name": "home", "mountPath": "/home/jovyan"}]
+        envs += [{"name": "HOME", "value": "/home/jovyan"}]
+        pod_spec["containers"][0]["command"] = [
+            "jupyter", "lab", "--no-browser", "--ip=0.0.0.0", "--port=8888",
+            "--ServerApp.root_dir=/home/jovyan", "--allow-root",
+            f"--IdentityProvider.token={password or config.JUPYTER_PASSWORD}",
         ]
         if uid:
             pod_spec["securityContext"] = {"runAsUser": uid, "runAsGroup": gid or uid,

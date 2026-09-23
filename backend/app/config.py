@@ -64,6 +64,9 @@ MATLAB_PASSWORD = os.getenv("K3SLAB_MATLAB_PASSWORD", "k3slab")
 SSH_USER = os.getenv("K3SLAB_SSH_USER", "k3slab")
 SSH_KEY = os.getenv("K3SLAB_SSH_KEY", os.path.expanduser("~/.ssh/id_k3s_lab_service"))
 
+# Token de JupyterLab (login del notebook) — el frontend lo prefill en la URL ?token=
+JUPYTER_PASSWORD = os.getenv("K3SLAB_JUPYTER_PASSWORD", "k3slab")
+
 # Monitoreo (Prometheus del lab — el de GMED corre en :9393, no usar)
 PROM_URL = os.getenv("K3SLAB_PROM_URL", "http://172.21.230.10:9090")
 GRAFANA_URL = os.getenv("K3SLAB_GRAFANA_URL", "https://mlab-grafana.usfq.edu.ec/")
