@@ -14,14 +14,17 @@
       var a=null; try{a=JSON.parse(localStorage.getItem('k3slab_auth')||'null')}catch(e){}
       if(!a||!a.token||a.role!=='dev'){location.replace('/');return}
       window.__AUTH=a;
-      /* mismo llenado del header que el enter() de la app */
-      var hname=document.getElementById('hname');
-      if(hname)hname.textContent=a.username||'';
-      var rb=document.getElementById('hrole');
-      if(rb){rb.textContent='DEV';rb.className='badge '+a.role}
-      var hctx=document.getElementById('hctx');
-      if(hctx)hctx.textContent='DEV';
-      document.querySelectorAll('.nav-dev').forEach(function(l){l.style.display=''});
+      /* mismo llenado del header que el enter() de la app — tras DOMContentLoaded
+         porque este script corre en <head>, antes de que exista el body */
+      document.addEventListener('DOMContentLoaded', function(){
+        var hname=document.getElementById('hname');
+        if(hname)hname.textContent=a.username||'';
+        var rb=document.getElementById('hrole');
+        if(rb){rb.textContent=(a.role||'dev').toUpperCase();rb.className='badge '+a.role}
+        var hctx=document.getElementById('hctx');
+        if(hctx)hctx.textContent='DEV';
+        document.querySelectorAll('.nav-dev').forEach(function(l){l.style.display=''});
+      });
     })();
     function auth(){return window.__AUTH||null}
     function logout(){localStorage.removeItem('k3slab_auth');location.href='/'}
@@ -199,9 +202,12 @@
       <span class="stat"><span class="dot" style="background: var(--red3d)"></span>Crítico</span>
     </div>
     <div class="stats">
-      <span class="stat"><span class="dot" style="background: var(--neon-green)"></span>Pods 1–4</span>
-      <span class="stat"><span class="dot" style="background: var(--cyan)"></span>Pods 5–9</span>
-      <span class="stat"><span class="dot" style="background: var(--purple)"></span>Pods 10+</span>
+      <span class="stat"><span class="dot" style="background: var(--neon-green)"></span>Pods · baja presión</span>
+      <span class="stat"><span class="dot" style="background: var(--cyan)"></span>Pods · presión media</span>
+      <span class="stat"><span class="dot" style="background: var(--purple)"></span>Pods · alta presión</span>
+    </div>
+    <div class="stats">
+      <span class="stat" style="font-size: 10.5px">presión = pods / núcleos de CPU · verde &lt; 0.5 · cian 0.5–1 · morado ≥ 1</span>
     </div>
   </div>
   <div class="toolbar">
@@ -354,7 +360,7 @@ const A=window.__AUTH||{}; let data={nodes:[]}, fetchError='';
 try{const r=await fetch('/api/admin/topology',{headers:{Authorization:'Bearer '+(A.token||'')}});if(r.ok)data=await r.json();else fetchError='La API respondió '+r.status}catch(e){fetchError='No se pudo contactar la API del clúster'}
 const canvas=document.querySelector('#scene'); const nodes=data.nodes||[]; const root=new THREE.Scene(); root.background=new THREE.Color('#070d1a'); root.fog=new THREE.Fog('#070d1a',28,70);
 let renderer, camera, controls, raycaster=new THREE.Raycaster(), pointer=new THREE.Vector2(), selected=null, selectedGroup=null, nodeGroups=[], camTween=null, viewOff=0, viewOffTarget=0, pendingModels=0; const clock=new THREE.Clock(), HOME_POS=new THREE.Vector3(15,15,20), HOME_TARGET=new THREE.Vector3(0,0,0), assetCache={};
-function healthColor(h){return h==='critical'||h==='error'?0xff5268:h==='warning'||h==='warn'?0xffad4d:0x54e6ff} function podColor(n){return n>=10?0xbf7bff:n>=5?0x54e6ff:0x4effa0}
+function healthColor(h){return h==='critical'||h==='error'?0xff5268:h==='warning'||h==='warn'?0xffad4d:0x54e6ff} function podColor(n){const p=n.podPressure;return p!=null?(p>=1?0xbf7bff:p>=.5?0x54e6ff:0x4effa0):((n.pods?.count||0)>=10?0xbf7bff:(n.pods?.count||0)>=5?0x54e6ff:0x4effa0)}
 function hex(c){return '#'+c.toString(16).padStart(6,'0')} function pct(v){return typeof v==='number'?v:(v?.pct??v?.usagePct??0)} function levelColor(l){return l==='error'?'var(--red)':l==='warning'?'var(--orange)':'var(--cyan)'}
 function hideLoading(){document.querySelector('#loading').classList.add('hide')} function modelDone(){if(--pendingModels<=0)hideLoading()}
 function loadAsset(name){return assetCache[name]||(assetCache[name]=new Promise((ok,fail)=>new GLTFLoader().load('/3D_assets/'+name+'.glb',ok,undefined,fail)))}
@@ -363,7 +369,7 @@ function setup(){try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alp
 function build(){const count=nodes.length||7;nodes.forEach((n,i)=>{const isMaster=(String(n.role||'').toUpperCase().includes('MASTER')||i===0), a=isMaster?0:(i-1)*Math.PI*2/Math.max(1,count-1), pos=new THREE.Vector3(isMaster?0:Math.cos(a)*9,0,isMaster?0:Math.sin(a)*9);const g=new THREE.Group();g.position.copy(pos);g.userData.node=n;root.add(g);nodeGroups.push(g);const base=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.5,.22,32),new THREE.MeshStandardMaterial({color:0x112a38,emissive:healthColor(n.health||'ok'),emissiveIntensity:.25,metalness:.7}));base.position.y=.11;g.add(base);const glow=new THREE.Mesh(new THREE.TorusGeometry(1.32,.025,8,48),new THREE.MeshBasicMaterial({color:healthColor(n.health||'ok')}));glow.rotation.x=Math.PI/2;glow.position.y=.25;g.add(glow);g.userData.base=base;g.userData.glow=glow;loadModel(g,n,isMaster);addLabel(g,n);addPods(g,n);if(!isMaster)connection(pos,n);});}
 function loadModel(g,n,isMaster){pendingModels++;loadAsset(n.asset||(isMaster?'DGX':'Server')).then(x=>{const model=x.scene.clone(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3());model.scale.setScalar((isMaster?2.8:2.2)/Math.max(size.x,size.y,size.z,1e-3)*(n.asset==='Server'?2:1));box.setFromObject(model);const c=box.getCenter(new THREE.Vector3()),sz=box.getSize(new THREE.Vector3()),fp=Math.hypot(sz.x,sz.z)/2,k=Math.max(1,(fp+.1)/1.25);model.position.set(-c.x,.25-box.min.y,-c.z);g.userData.h=sz.y+.25;g.userData.orbitMin=Math.max(1.7,fp+.35);g.userData.base.scale.set(k,1,k);g.userData.glow.scale.set(k,k,1);model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});g.add(model);modelDone()},()=>{const h=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.3,1),new THREE.MeshStandardMaterial({color:isMaster?0x274c6a:0x183d50,emissive:healthColor(n.health||'ok'),emissiveIntensity:.12,metalness:.4,roughness:.4}));h.position.y=1.35;g.add(h);modelDone()});}
 function connection(pos,n){const pts=[new THREE.Vector3(0,.32,0),new THREE.Vector3(pos.x,.32,pos.z)];const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:healthColor(n.health||'ok'),transparent:true,opacity:.75}));line.userData.nid=n.id;root.add(line);const pulse=new THREE.Mesh(new THREE.SphereGeometry(.11,10,10),new THREE.MeshBasicMaterial({color:healthColor(n.health||'ok')}));pulse.userData={start:new THREE.Vector3(),end:pos.clone(),phase:Math.random()};pulse.position.set(0,.34,0);root.add(pulse);line.userData.pulse=pulse;}
-function addPods(g,n){const c=Math.min(12,Math.ceil((n.pods?.count||0)/2));if(!c)return;for(let i=0;i<c;i++){const o=new THREE.Mesh(new THREE.SphereGeometry(.09,10,10),new THREE.MeshBasicMaterial({color:podColor(n.pods?.count||1),transparent:true,opacity:.9}));o.userData={r:.01+Math.random()*.5,s:.6+Math.random()*.8,p:Math.random()*Math.PI*2};g.add(o);}}
+function addPods(g,n){const c=Math.min(12,Math.ceil((n.pods?.count||0)/2));if(!c)return;for(let i=0;i<c;i++){const o=new THREE.Mesh(new THREE.SphereGeometry(.09,10,10),new THREE.MeshBasicMaterial({color:podColor(n),transparent:true,opacity:.9}));o.userData={r:.01+Math.random()*.5,s:.6+Math.random()*.8,p:Math.random()*Math.PI*2};g.add(o);}}
 function addLabel(g,n){const el=document.createElement('div');el.className='node-label';el.textContent=n.hostname||n.id;el.style.cssText='position:absolute;transform:translate(-50%,-50%);padding:4px 7px;border:1px solid rgba(130,220,255,.35);border-radius:5px;background:rgba(7,18,28,.76);color:#d8f7ff;font:10px Inter,sans-serif;white-space:nowrap;pointer-events:none';g.userData.el=el;}
 function renderLabels(){for(const g of nodeGroups){const p=g.position.clone();p.y=(g.userData.h||2.45)+.85;p.project(camera);if(p.z<1){g.userData.el.style.left=((p.x*.5+.5)*innerWidth)+'px';g.userData.el.style.top=((-p.y*.5+.5)*innerHeight)+'px';g.userData.el.style.display='block'}else g.userData.el.style.display='none';if(!g.userData.el.parentNode)document.body.appendChild(g.userData.el);}}
 function updateDetail(n){document.querySelector('#dName').textContent=n.hostname||n.id;document.querySelector('#dMeta').textContent=[String(n.role||'').toUpperCase(),n.ip,n.os,n.kernel].filter(Boolean).join(' · ');const hc=document.querySelector('#dHealth');hc.textContent=(n.health||'ok').toUpperCase()+(n.healthScore!=null?` · ${n.healthScore}/100`:'');hc.style.color=hex(healthColor(n.health||'ok'));hc.style.borderColor=hex(healthColor(n.health||'ok'));document.querySelector('#statusMessage').textContent=n.statusMessage||'';const metrics=document.querySelector('#metrics');metrics.innerHTML='';const gb=v=>v?.usedGb!=null?` · ${v.usedGb}/${v.totalGb} GB`:'',net=n.network;const rows=[['CPU',pct(n.cpu),`${pct(n.cpu)}%${n.cpu?.cores?` · ${n.cpu.cores} núcleos`:''}`],['RAM',pct(n.memory),`${pct(n.memory)}%${gb(n.memory)}`],['Disco',pct(n.disk),`${pct(n.disk)}%${gb(n.disk)}`]];if(net)rows.push(['Red',((net.rxMbps||0)+(net.txMbps||0))/10,`↓${net.rxMbps??0} ↑${net.txMbps??0} Mbps`]);rows.forEach(([x,v,txt])=>{const bar=v>=90?'var(--red)':v>=75?'var(--orange)':'';metrics.insertAdjacentHTML('beforeend',`<div><div class="metric-head"><span>${x}</span><b>${txt}</b></div><div class="meter"><span style="width:${Math.min(100,v||0)}%${bar?`;background:${bar}`:''}"></span></div></div>`)});const p=n.prometheus||{};document.querySelector('#prom').innerHTML=[['Uptime',p.uptimeDays!=null?`${p.uptimeDays} días`:(p.uptime||'—')],['Alertas activas',p.alerts??0],['Targets',p.scrapeTargets!=null?`${p.scrapeTargets-(p.targetsDown||0)}/${p.scrapeTargets} UP`:null],['Load 1m',p.cpuLoad1],['Contenedores',n.contenedores],['Reinicios pods',p.podRestarts24h??0]].filter(r=>r[1]!=null).map(([k,v])=>`<div class="metric-head" style="padding:4px 0"><span>${k}</span><b style="color:#e9f8ff">${v}</b></div>`).join('');const gpus=n.gpus||[],gs=document.querySelector('#gpuSection');if(gpus.length){gs.hidden=false;document.querySelector('#gpuList').innerHTML=gpus.map(g=>`<div class="metric-head" style="padding:4px 0"><span>GPU ${g.idx??''} · ${g.model||''}</span><b style="color:${(g.util_pct||0)>=90?'var(--red)':(g.util_pct||0)>=70?'var(--orange)':'#e9f8ff'}">${g.util_pct??0}% · ${g.vram_used??0}/${g.vram_total??0} MiB</b></div>`).join('')}else gs.hidden=true;const pods=n.pods||{};document.querySelector('#podTotal').textContent=`${pods.count||0}`+(pods.running!=null?` (${pods.running} running · ${pods.pending||0} pending · ${pods.failed||0} failed)`:'');document.querySelector('#podList').innerHTML=(pods.owners||[]).map(o=>{const c=Array.isArray(o.containers)?o.containers.join(', '):`${o.containers||0} contenedores`;return `<li><b>${o.name}</b> · ${o.namespace||''} / ${o.kind||''}${o.replicas!=null?` ×${o.replicas}`:''}<br><small>${c}</small></li>`}).join('')||'<li>Sin desglose disponible</li>'}

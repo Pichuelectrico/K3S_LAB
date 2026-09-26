@@ -894,6 +894,11 @@ def topology(_=Depends(requiere_dev)):
             "pods": {"count": pods.get("count", 0), "running": pods.get("running", 0),
                      "pending": pods.get("pending", 0), "failed": pods.get("failed", 0),
                      "owners": pods.get("owners", [])},
+            # Presión de pods relativa al hardware: pods por núcleo de CPU.
+            # <0.5 pocos para su capacidad · 0.5–1 medio · >=1 muchos (al límite
+            # del allocatable estándar de k8s: pods ≈ 10 × cores como tope duro).
+            "podPressure": round(pods.get("count", 0) / s["cores"], 2)
+                           if s.get("cores") else None,
             "sessions": sesiones_por_nodo.get(nombre, []),
             "activity": act,
         })
