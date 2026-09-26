@@ -63,4 +63,11 @@ import os  # noqa: E402
 
 _static = os.path.join(config.BASE_DIR, "static")
 if os.path.isdir(_static):
+    # Assets 3D (modelos .glb del panel de equipos) — antes del mount "/" para
+    # que no lo capture el catch-all de static.
+    _assets3d = os.path.join(config.BASE_DIR, "..", "3D_assets")
+    if os.path.isdir(_assets3d):
+        app.mount("/3D_assets", StaticFiles(directory=_assets3d), name="assets3d")
+
+    # Frontend (single page app)
     app.mount("/", StaticFiles(directory=_static, html=True), name="static")

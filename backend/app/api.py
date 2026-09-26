@@ -683,3 +683,223 @@ def actividad(_=Depends(requiere_dev)):
     } for s in db.query(WebSesion).order_by(WebSesion.last_seen.desc()).limit(500).all()]
 
     return {"sesiones": sesiones, "entornos": entornos, "who_raw": who_raw, "web": web}
+
+
+@router.get("/admin/topology")
+def topology(_=Depends(requiere_dev)):
+    """Topología 3D del panel de equipos (frontend/Equipos3D.html): los 7 hosts
+    del lab con métricas reales del Prometheus + pods k3s por nodo (con dueños)
+    + sesiones SSH en vivo + entornos activos. Misma forma que window.EQUIPOS_DEMO."""
+    from . import prom
+
+    # 1. Métricas de hosts del Prometheus del lab (order fijo HOST_ORDER)
+    servers_data = prom.obtener_servers()
+
+    # 2. Versión del clúster (k3s) — UNA llamada SSH
+    version = ""
+    try:
+        ok, out = k8s.kubectl("version -o json")
+        if ok:
+            version = (json.loads(out).get("serverVersion") or {}).get("gitVersion", "")
+    except Exception:  # noqa: BLE001
+        version = ""
+
+    # 3. Pods k3s con detalles por nodo — UNA llamada SSH (get pods -A -o json)
+    pods_por_nodo: dict[str, dict] = {}
+    try:
+        ok, out = k8s.kubectl("get pods -A -o json")
+        if ok:
+            for item in json.loads(out).get("items", []):
+                nodo = (item.get("spec") or {}).get("nodeName") or ""
+                st = item.get("status") or {}
+                fase = (st.get("phase") or "unknown").lower()
+                meta = item.get("metadata") or {}
+                refs = meta.get("ownerReferences") or [{}]
+                d = pods_por_nodo.setdefault(nodo, {
+                    "count": 0, "running": 0, "pending": 0, "failed": 0,
+                    "succeeded": 0, "restarts": 0, "owners": [],
+                })
+                d["count"] += 1
+                if fase in ("running", "pending", "failed", "succeeded"):
+                    d[fase] += 1
+                d["restarts"] += sum(
+                    (cs or {}).get("restartCount", 0)
+                    for cs in (st.get("containerStatuses") or [])
+                )
+                d["owners"].append({
+                    "name": meta.get("name", ""),
+                    "namespace": meta.get("namespace", "default"),
+                    "kind": refs[0].get("kind", "Pod"),
+                    "containers": len((item.get("spec") or {}).get("containers") or []),
+                })
+    except Exception:  # noqa: BLE001
+        pods_por_nodo = {}
+
+    # 4. Sesiones SSH en vivo por nodo (mismo criterio que /admin/activity)
+    sesiones_por_nodo: dict[str, list] = {}
+    for name in config.NODE_IPS:
+        ip = config.NODE_IPS.get(name)
+        if not ip:
+            continue
+        try:
+            r = auth._ssh_cmd(ip, "who", timeout=8)
+        except Exception:  # noqa: BLE001 — nodo caído/inau-ible
+            continue
+        if r.returncode != 0:
+            continue
+        for line in r.stdout.splitlines():
+            p = line.split()
+            if len(p) < 5 or p[0] == "gdm":  # gdm = display manager, no una persona
+                continue
+            user = p[0]
+            if p[1].startswith(("pts/", "tty")):
+                tty, rest = p[1], p[2:]
+            else:
+                tty, rest = "-", p[1:]
+            if len(rest) < 3:
+                continue
+            sesiones_por_nodo.setdefault(name, []).append({
+                "user": user, "type": "ssh" if tty.startswith("pts/") else "consola",
+                "since": rest[1], "from": tty if tty == "-" else rest[0],
+            })
+
+    # 5. Alertas firing del Prometheus, agrupadas por host (cluster-wide por nodo)
+    alertas_por_host: dict[str, int] = {}
+    try:
+        for m in prom._query('ALERTS{alertstate="firing"}'):
+            alertas_por_host[prom._nombre(m.get("metric", {}).get("instance", ""))] = \
+                alertas_por_host.get(prom._nombre(m.get("metric", {}).get("instance", "")), 0) + 1
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 6. Targets de scrape del Prometheus (up/total por host)
+    import urllib.request
+    targets_por_host: dict[str, dict] = {}
+    try:
+        url = config.PROM_URL + "/api/v1/targets"
+        with urllib.request.urlopen(url, timeout=8) as r:
+            targets_data = prom.json_loads(r.read())
+        for t in (targets_data.get("data") or {}).get("activeTargets") or []:
+            host = prom._nombre(t.get("labels", {}).get("instance", ""))
+            d = targets_por_host.setdefault(host, {"total": 0, "up": 0})
+            d["total"] += 1
+            if (t.get("health") or "") == "up":
+                d["up"] += 1
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 7. Red por host (Mbps rx/tx de interfaces físicas) — Prometheus
+    red_rx: dict[str, float] = {}
+    red_tx: dict[str, float] = {}
+    try:
+        rx = prom._query('sum by (instance)(rate(node_network_receive_bytes_total'
+                         '{device!~"lo|veth.*|docker.*|flannel.*|cali.*|kube-ipvs.*|tunl0|cni.*|cilium.*"}[5m])) * 8 / 1e6')
+        tx = prom._query('sum by (instance)(rate(node_network_transmit_bytes_total'
+                         '{device!~"lo|veth.*|docker.*|flannel.*|cali.*|kube-ipvs.*|tunl0|cni.*|cilium.*"}[5m])) * 8 / 1e6')
+        for m in rx:
+            red_rx[prom._nombre(m.get("metric", {}).get("instance", ""))] = prom._f(m["value"][1])
+        for m in tx:
+            red_tx[prom._nombre(m.get("metric", {}).get("instance", ""))] = prom._f(m["value"][1])
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 8. Entornos con estado real del clúster (mismo criterio que /admin/activity)
+    deploy_info = k8s.get_lab_envs()
+    entornos: list[dict] = []
+    with SessionLocal() as db:
+        for env in db.query(Env).order_by(Env.owner, Env.name).all():
+            info = deploy_info.get(env.name) or {}
+            if info.get("ready", 0) > 0:
+                estado = "running"
+            elif info.get("replicas", 0) > 0:
+                estado = "creating"
+            else:
+                estado = "stopped"
+            entornos.append({
+                "owner": env.owner, "name": env.name, "type": env.catalog_id,
+                "node": env.node, "status": estado, "gpu": bool(env.gpu),
+            })
+
+    def _pct(used, total) -> float:
+        return round(used / total * 100, 1) if total else 0.0
+
+    # Nodos k3s: nombre del panel (HOST_ORDER) → nodeName del clúster.
+    # "DGX2" es el nodo k3s "dgx2-station"; el resto coincide.
+    K3S_NODE_NAME = {"wslab01": "wslab01", "wslab02": "wslab02",
+                     "wslab03": "wslab03", "DGX2": "dgx2-station"}
+    nodes = []
+    for s in servers_data:
+        nombre = s["nombre"]
+        cpu_pct = prom._f(s.get("cpu_pct"))
+        ram_pct = _pct(s.get("ram_used") or 0, s.get("ram_total") or 0)
+        disk_total = s.get("disk_total") or 0
+        disk_pct = _pct(disk_total - (s.get("disk_free") or 0), disk_total)
+        peor = max(cpu_pct, ram_pct, disk_pct)
+        online = bool(s.get("online"))
+        health = "ok"
+        if not online or peor >= 90:
+            health = "critical"
+        elif peor >= 75:
+            health = "warning"
+        pods = pods_por_nodo.get(K3S_NODE_NAME.get(nombre, "")) or \
+            {"count": 0, "running": 0, "pending": 0, "failed": 0, "restarts": 0, "owners": []}
+        # Actividad por nodo: entornos en ese host (pod caído = warning)
+        act = []
+        for e in entornos:
+            if e["node"] != nombre or e["status"] == "stopped":
+                continue
+            act.append({
+                "level": "info" if e["status"] == "running" else "warning",
+                "time": "",
+                "message": f"{e['name']} · {e['type']} · {e['owner']}"
+                           + (" · GPU" if e["gpu"] else "") + f" — {e['status']}",
+            })
+        for ses in sesiones_por_nodo.get(nombre, []):
+            act.append({"level": "info", "time": ses.get("since", ""),
+                        "message": f"{ses['user']} conectado ({ses['type']}) desde {ses.get('from', '?')}"})
+        tg = targets_por_host.get(nombre) or {}
+        nodes.append({
+            "id": nombre,
+            "hostname": s.get("hostname") or nombre,
+            "role": "MASTER" if nombre == "wslab01" else
+                    ("WORKER" if nombre in K3S_NODE_NAME else "HOST"),
+            "asset": "WsL" if nombre.startswith("wslab") else
+                     ("DGX" if "dgx" in nombre.lower() else "Server"),
+            "ip": s.get("ip", ""),
+            "os": s.get("os", ""),
+            "kernel": s.get("kernel", ""),
+            "online": online,
+            "health": health,
+            "healthScore": max(0, min(100, int(100 - peor))),
+            "statusMessage": "" if online else "Sin datos del Prometheus (host caído o inalcanzable)",
+            "cpu": {"pct": round(cpu_pct, 1), "cores": s.get("cores"),
+                    "load1": s.get("load1"), "load5": s.get("load5"), "load15": s.get("load15")},
+            "memory": {"pct": ram_pct, "usedGb": prom._gb(s.get("ram_used") or 0),
+                       "totalGb": prom._gb(s.get("ram_total") or 0)},
+            "disk": {"pct": disk_pct, "usedGb": prom._gb(disk_total - (s.get("disk_free") or 0)),
+                     "totalGb": prom._gb(disk_total)},
+            "network": ({"rxMbps": round(red_rx.get(nombre, 0), 1),
+                         "txMbps": round(red_tx.get(nombre, 0), 1)}
+                        if nombre in red_rx or nombre in red_tx else None),
+            "gpus": s.get("gpus") or [],
+            "contenedores": s.get("contenedores"),
+            "prometheus": {
+                "uptime": s.get("uptime", ""),
+                "alerts": alertas_por_host.get(nombre, 0),
+                "scrapeTargets": tg.get("total"),
+                "targetsDown": (tg.get("total") - tg.get("up", 0)) if tg.get("total") else None,
+                "cpuLoad1": s.get("load1"),
+                "podRestarts24h": pods.get("restarts", 0),
+            },
+            "pods": {"count": pods.get("count", 0), "running": pods.get("running", 0),
+                     "pending": pods.get("pending", 0), "failed": pods.get("failed", 0),
+                     "owners": pods.get("owners", [])},
+            "sessions": sesiones_por_nodo.get(nombre, []),
+            "activity": act,
+        })
+
+    return {
+        "cluster": {"name": "k3s-lab", "version": version or "k3s"},
+        "nodes": nodes,
+        "generatedAt": dt.datetime.utcnow().isoformat() + "Z",
+    }
