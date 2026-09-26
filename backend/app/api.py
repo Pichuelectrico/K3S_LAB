@@ -836,13 +836,17 @@ def topology(_=Depends(requiere_dev)):
         disk_pct = _pct(disk_total - (s.get("disk_free") or 0), disk_total)
         peor = max(cpu_pct, ram_pct, disk_pct)
         online = bool(s.get("online"))
-        health = "ok"
-        if not online or peor >= 90:
-            health = "critical"
-        elif peor >= 75:
-            health = "warning"
         pods = pods_por_nodo.get(K3S_NODE_NAME.get(nombre, "")) or \
             {"count": 0, "running": 0, "pending": 0, "failed": 0, "restarts": 0, "owners": []}
+        # Salud: el peor de CPU/RAM/Disco >= 90, un pod failed o nodo
+        # inalcanzable -> crítico; peor >= 75 o GPU util >= 80 -> advertencia.
+        gpu_max = max((prom._f(g.get("util")) for g in (s.get("gpus") or [])),
+                      default=0.0)
+        health = "ok"
+        if not online or peor >= 90 or pods.get("failed", 0) > 0:
+            health = "critical"
+        elif peor >= 75 or gpu_max >= 80:
+            health = "warning"
         # Actividad por nodo: entornos en ese host (pod caído = warning)
         act = []
         for e in entornos:
